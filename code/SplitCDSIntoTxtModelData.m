@@ -6,6 +6,9 @@ filename = 'Han_20170203_COactpas_CDS_001.mat';
 params.cont_signal_names = {'joint_vel','pos','vel','acc'};
 params.array_name = 'S1';
 trial_data = loadTDfromCDS(append('~/Documents/Documents/Thesis_Seminar/Model/data/',filename) , params);
+%% Use trial data to process signals
+%rebin to 50 ms
+trial_data = binTD(trial_data, 5);
 
 %Smooth spikes
 smoothParams.signals = {'S1_spikes'};
@@ -30,7 +33,7 @@ td.pos(:,2) = td.pos(:,2)+32;
 
 % Smooth kinematic variables
 smoothParams.signals = {'pos','vel','acc','joint_vel'};
-smoothParams.width = 0.03;
+smoothParams.width = 0.10;
 smoothParams.calc_rate = false;
 td = smoothSignals(td,smoothParams);
 
@@ -39,10 +42,12 @@ sorted_idx = find(td.S1_unit_guide(:,2)~=0);
 td.S1_spikes = td.S1_spikes(:,sorted_idx);
 td.S1_unit_guide = td.S1_unit_guide(sorted_idx,:);
 
-save('Han_20170203_COactpas_SmoothKin.mat')
+
 
 %% Extract joint_vel data in txt file
+nan = find(isnan(td.joint_vel));
+td.joint_vel(nan) = 0;
 joint_vel = td.joint_vel;
-joint_vel = rmmissing(joint_vel);
 writematrix(joint_vel, 'Han_20170203_COactpas_SmoothJointVel.txt')
 
+save('Han_20170203_COactpas_SmoothKin.mat')
