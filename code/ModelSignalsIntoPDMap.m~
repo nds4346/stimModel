@@ -3,7 +3,7 @@ filename = 'Han_20170203_COactpas_SmoothKin.mat';
 pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 load([pathname filesep filename]);
 
-firing_rates = readtable('firing_rates.csv');
+firing_rates = readtable('firing_rates_20210216.csv');
 firing_rates = firing_rates{:,:};
 
 %% add new firing rates to td
@@ -28,6 +28,12 @@ td(isnan([td.idx_movement_on])) = [];
 x=[td.result]=='R';
 td = td(x);
 
+%% plot reaches
+for trial= 1:length(td)
+    reach = plot(td(trial).pos(:,1),td(trial).pos(:,2));
+    hold on
+end
+
 %% calculate PDs for signals
 %call model output signals for this
 params.out_signals = 'firing_rates';
@@ -44,8 +50,11 @@ fig = heatmap(pdtable);
 % jet_wrap = vertcat(jet,flipud(jet));
 fig.Colormap = hsv;
 fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
+fig.GridVisible = 'off';
 
 %% randomly select stimulation neuron
 
 %% simulate circular stimulation
-i =  %µA
+i = 20;  %current in µA
+k = 1292; %space constant in µa/mm^2 (Stoney,et al)
+r = (i^2)/k; %radius of activation in mm

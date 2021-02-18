@@ -28,6 +28,12 @@ td(isnan([td.idx_movement_on])) = [];
 x=[td.result]=='R';
 td = td(x);
 
+%% plot reaches
+for trial= 1:length(td)
+    reach = plot(td(trial).pos(:,1),td(trial).pos(:,2));
+    hold on
+end
+
 %% calculate PDs for signals
 %call model output signals for this
 params.out_signals = 'firing_rates';
@@ -37,7 +43,7 @@ pdtable = getTDPDs(td, params);
 
 pdtable =rad2deg(pdtable.velPD);
 pdtable(pdtable<0) = pdtable(pdtable<0)+360;
-pdtable =reshape(pdtable, [40,40]);
+pdtable =reshape(pdtable, [30,30]);
 
 %% Put PDs in 30x30 heatmap
 fig = heatmap(pdtable);
