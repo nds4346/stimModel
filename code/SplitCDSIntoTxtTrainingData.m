@@ -11,8 +11,10 @@ trial_data = loadTDfromCDS(append('~/Documents/Documents/Thesis_Seminar/Model/da
 trial_data = binTD(trial_data, 5);
 
 %% load from .mat file
-filename = 'Han_20170203_COactpas_SmoothKin_50ms.mat';
-pathname = 'D:\Lab\Data\StimModel';
+
+%filename = 'Han_20160325_RW_SmoothJointVel.mat';
+pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+
 load([pathname filesep filename]);
 
 % Smooth kinematic variables

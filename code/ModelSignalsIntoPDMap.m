@@ -10,6 +10,8 @@ smoothParams.calc_rate = false;
 td = smoothSignals(td,smoothParams);
 
 firing_rates = readtable([pathname,filesep,'vae_rates_Chips_20151211_RW_50ms.csv']);
+
+%%
 firing_rates = firing_rates{:,:};
 %%
 
@@ -26,6 +28,17 @@ end
 %% add new firing rates to td
 td.firing_rates = firing_rates;
 
+
+%% IF USING PARTIAL DATA SET: cut off first elements of td to match td time bins with firing_rates
+td.acc(1:30000,:) = [];
+td.pos(1:30000,:) = [];
+td.vel(1:30000,:) = [];
+td.joint_vel(1:30000,:) = [];
+td.S1_spikes(1:30000,:) = [];
+td.speed(1:30000,:) = [];
+td.vel_rect(1:30000,:) = [];
+
+
 %% split tds
 %Split TD
 splitParams.split_idx_name = 'idx_startTime';
@@ -34,6 +47,14 @@ td_trim = splitTD(td,splitParams);
 
 % trim tds
 % td_trim = trimTD(td_trim,{'idx_startTime',15},{'idx_startTime',30});
+%% Get movement onset
+% td(isnan([td.idx_startTime])) = [];
+% 
+% moveOnsetParams.start_idx = 'idx_startTime';
+% moveOnsetParams.end_idx = 'idx_endTime';
+% td = getMoveOnsetAndPeak(td,moveOnsetParams);
+% 
+% td(isnan([td.idx_movement_on])) = [];
 
 %% get rid of non-reward trials
 x=[td_trim.result]=='R';
@@ -44,6 +65,7 @@ for trial= 1:length(td_trim)
     reach = plot(td_trim(trial).pos(:,1),td_trim(trial).pos(:,2));
     hold on
 end
+hold off
 
 %% calculate PDs for signals
 %call model output signals for this
@@ -58,14 +80,21 @@ figure();
 hist(pdtable);
 pdtable =reshape(pdtable, [30,30]);
 
+%% Circular Histogram of PDs
+figure
+theta = deg2rad(pdtable);
+theta = reshape((theta).', 1, []);
+his = polarhistogram(theta, 36);
+
 %% Put PDs in 30x30 heatmap
-figure()
-fig = imagesc(pdtable);
+
+figure
+fig = heatmap(pdtable);
 % jet_wrap = vertcat(jet,flipud(jet));
-% fig.Colormap = hsv;
-% fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
-% fig.GridVisible = 'off';
-colorbar
+fig.Colormap = hsv;
+fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
+fig.GridVisible = 'off';
+
 %% randomly select stimulation neuron
 
 %% simulate circular stimulation
