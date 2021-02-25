@@ -1,6 +1,6 @@
 %% Load cds File into td
 
-filename = 'Han_20160325_RW_CDS_001.mat';
+filename = 'Han_20170203_COactpas_SmoothKin_50m.mat';
 
 
 params.cont_signal_names = {'joint_vel'};
@@ -11,8 +11,8 @@ trial_data = loadTDfromCDS(append('~/Documents/Documents/Thesis_Seminar/Model/da
 trial_data = binTD(trial_data, 5);
 
 %% load from .mat file
-filename = 'Han_20160325_RW_SmoothJointVel.mat';
-pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+filename = 'Han_20170203_COactpas_SmoothKin_50ms.mat';
+pathname = 'D:\Lab\Data\StimModel';
 load([pathname filesep filename]);
 
 % Smooth kinematic variables
@@ -22,11 +22,15 @@ smoothParams.calc_rate = false;
 td = smoothSignals(trial_data,smoothParams);
 
 
-save('Han_20160325_RW_SmoothJointVel.mat')
-
 %% Extract joint_vel data in txt file
 joint_vel = td.joint_vel;
 joint_vel = rmmissing(joint_vel);
-joint_vel = normalize(joint_vel);
+joint_vel = zscore(joint_vel);
 joint_vel = fix(joint_vel * 10^6)/10^6;
-writematrix(joint_vel, 'Han_20160325_RW_SmoothNormalizedJointVel_50ms.txt')
+% writematrix(joint_vel, 'Han_20160325_RW_SmoothNormalizedJointVel_50ms.txt')
+dlmwrite([pathname,filesep,'Han_20170203_COactpas_SmoothNormalizedJointVel_50ms.txt'],joint_vel,'delimiter',',','newline','pc')
+
+
+
+
+

@@ -12,17 +12,17 @@ import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument('--batch_size', type=int, default=256)
-argparser.add_argument('--latent_shape', type=int, default=[30, 30], help='dimensions of S1 map')
-argparser.add_argument('--n_epochs', type=int, default=10)
+argparser.add_argument('--batch_size', type=int, default=1024)
+argparser.add_argument('--latent_shape', type=int, default=[40, 40], help='dimensions of S1 map')
+argparser.add_argument('--n_epochs', type=int, default=80)
 argparser.add_argument('--sampling', type=str, default='poisson')
 argparser.add_argument('--n_samples', type=int, default=20)
 argparser.add_argument('--layers', type=int, default=[20, 40])
 argparser.add_argument('--cuda', action='store_true')
 argparser.add_argument('--sigma', type=float, default=2.0, help='neibourhood factor')
-argparser.add_argument('--eta', type=float, default=0.00001, help='learning rate')
+argparser.add_argument('--eta', type=float, default=0.001, help='learning rate')
 argparser.add_argument('--lateral', type=str, default='mexican', help='type of lateral influence')
-argparser.add_argument('--lambda_l', type=float, default=0.2, help='strength of lateral influence')
+argparser.add_argument('--lambda_l', type=float, default=5, help='strength of lateral influence')
 argparser.add_argument('--default_rate', type=float, default=0.1, help='expectation of rate')
 argparser.add_argument('--save_path', type=str, default='/tmp/model', help='path of saved model')
 args = argparser.parse_args()
@@ -32,6 +32,7 @@ if args.cuda:
 
 latent_size = args.latent_shape[0]*args.latent_shape[1]
 writer = SummaryWriter()
+
 EPS = 1e-6
 
 
@@ -115,14 +116,18 @@ class VAE(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.lateral = torch.from_numpy(lateral).type(torch.FloatTensor) # not positive definite
-
+        self.dropout = nn.Dropout(0.70)
+        
     def forward(self, inputs):
         if args.cuda:
             self.cuda()
             inputs = inputs.cuda()
         #inputs = inputs/40.0
-        rates = self.encoder(inputs)+0.01
+        rates = self.encoder(inputs)
 
+        # dropout layer
+        rates = self.dropout(rates)+0.01
+        
         if args.sampling is 'bernoulli':
             self.posterior = torch.distributions.Bernoulli(probs=rates)
             samples = self.posterior.sample([args.n_samples])
@@ -196,12 +201,11 @@ def vaf(x,xhat):
     return (1-(np.sum(np.square(x-xhat))/np.sum(np.square(x))))*100
 
 
+#%%
 
-
-
-my_data = np.genfromtxt('/Users/nathanschimpf/Documents/Documents/Thesis_Seminar/Model/data/Han_20160325_RW_SmoothJointVel_10ms.txt', delimiter=',')[:30000,:]
-train = my_data[:29000]
-test = my_data[29000:]
+my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointVel_50ms.txt', delimiter=',')[:,:]
+train = my_data[:15000]
+test = my_data[15000:]
 
 x_tr = torch.from_numpy(train[:,:]).type(torch.FloatTensor)
 y_tr = torch.from_numpy(train[:,:]).type(torch.FloatTensor)
@@ -219,6 +223,9 @@ output_size = len(y_tr[0])
 encoder = Encoder(input_size=input_size)
 decoder = Decoder(input_size=output_size)
 lateral = lateral_effect()
+
+
+#%%
 vae = VAE(encoder, decoder, lateral)
 
 if args.cuda:
@@ -246,12 +253,6 @@ for epoch in range(args.n_epochs):
         
     test_result = vae(x_te)
     y_te_hat = test_result.cpu().detach().numpy()
-    
-        
-
-
-
-
 
     weight = vae.decoder.layer1[0].weight.data
     w = weight.reshape([-1, 1, args.latent_shape[0], args.latent_shape[1]])
@@ -291,8 +292,19 @@ for epoch in range(args.n_epochs):
         writer.add_image('Model/Response', response, epoch)
         writer.add_figure('Model/test', fig, epoch)
 
-
+    writer.flush()
 
 #writer.export_scalars_to_json('./all_scalers.json')
 writer.close()
 
+#%% run test data set through model and save firing rates
+
+my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointVel_50ms.txt', delimiter=',')[:,:]
+my_data = torch.from_numpy(my_data[:,:]).type(torch.FloatTensor)
+rates = vae.encoder(my_data)
+rates = rates.detach().numpy()
+np.savetxt("D:\\Lab\\Data\\StimModel\\vae_rates_Han_20201204_RT3D_50ms.csv", rates,delimiter=",")
+
+my_data_pred = vae(my_data)
+test_vaf = vaf(my_data.detach().numpy(),my_data_pred.detach().numpy())
+    
