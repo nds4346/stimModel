@@ -12,7 +12,7 @@ trial_data = loadTDfromCDS(append('~/Documents/Documents/Thesis_Seminar/Model/da
 %rebin to 50 ms
 trial_data = binTD(trial_data, 5);
 %% If starting with .mat file
-%filename = 'Han_20170203_COactpas_SmoothKin.mat';
+%filename = 'Han_201702035_COactpas_SmoothKin.mat';
 % pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 % load([pathname filesep filename]);
 
@@ -54,7 +54,7 @@ save('Han_201603015_RW_SmoothKin_50ms.mat')
 %% Extract joint_vel data in txt file
 nan = find(isnan(td.joint_vel));
 td.joint_vel(nan) = 0;
-td.joint_vel = normalize(td.joint_vel);
+td.joint_vel = normalize(td.joint_vel, 'range', [-1 1]);
 joint_vel = td.joint_vel;
 joint_vel = fix(joint_vel * 10^6)/10^6;
 writematrix(joint_vel, 'Han_20160315_RW_SmoothNormalizedJointVel_50ms.txt')

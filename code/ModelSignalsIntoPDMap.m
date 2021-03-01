@@ -69,7 +69,7 @@ figure
 fig = heatmap(pdtable);
 % jet_wrap = vertcat(jet,flipud(jet));
 fig.Colormap = hsv;
-fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
+fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
 fig.GridVisible = 'off';
 
 
