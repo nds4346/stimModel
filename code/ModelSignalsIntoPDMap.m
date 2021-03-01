@@ -1,11 +1,29 @@
 %% import data files
-
-filename = 'Han_201603015_RW_SmoothKin_50ms.mat';
-pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+filename = 'Chips_20151211_RW_td.mat';
+pathname = 'D:\Lab\Data\StimModel';
 load([pathname filesep filename]);
+
+% Smooth kinematic variables
+smoothParams.signals = {'joint_vel'};
+smoothParams.width = 0.10;
+smoothParams.calc_rate = false;
+td = smoothSignals(td,smoothParams);
+
+firing_rates = readtable([pathname,filesep,'vae_rates_Chips_20151211_RW_50ms.csv']);
+
 %%
-firing_rates = readtable('firing_rates_20210223.csv');
 firing_rates = firing_rates{:,:};
+%%
+
+field_len = length(td.vel);
+td_fieldnames = fieldnames(td);
+[~,mask] = rmmissing(td.joint_vel);
+
+for i_field = 1:numel(td_fieldnames)
+    if(length(td.(td_fieldnames{i_field})) == field_len)
+        td.(td_fieldnames{i_field}) = td.(td_fieldnames{i_field})(mask==0,:);
+    end
+end
 
 %% add new firing rates to td
 td.firing_rates = firing_rates;
@@ -25,8 +43,10 @@ td.vel_rect(1:30000,:) = [];
 %Split TD
 splitParams.split_idx_name = 'idx_startTime';
 splitParams.linked_fields = {'trialID','result'};
-td = splitTD(td,splitParams);
+td_trim = splitTD(td,splitParams);
 
+% trim tds
+% td_trim = trimTD(td_trim,{'idx_startTime',15},{'idx_startTime',30});
 %% Get movement onset
 % td(isnan([td.idx_startTime])) = [];
 % 
@@ -37,12 +57,12 @@ td = splitTD(td,splitParams);
 % td(isnan([td.idx_movement_on])) = [];
 
 %% get rid of non-reward trials
-x=[td.result]=='R';
-td = td(x);
+x=[td_trim.result]=='R';
+td_trim = td_trim(x);
 
 %% plot reaches
-for trial= 1:length(td)
-    reach = plot(td(trial).pos(:,1),td(trial).pos(:,2));
+for trial= 1:length(td_trim)
+    reach = plot(td_trim(trial).pos(:,1),td_trim(trial).pos(:,2));
     hold on
 end
 hold off
@@ -51,11 +71,13 @@ hold off
 %call model output signals for this
 params.out_signals = 'firing_rates';
 params.in_signals = {'vel'};
-params.num_boots = 10;
-pdtable = getTDPDs(td, params);
+params.num_boots = 0;
+pdtable = getTDPDs(td_trim, params);
 
 pdtable =rad2deg(pdtable.velPD);
 pdtable(pdtable<0) = pdtable(pdtable<0)+360;
+figure();
+hist(pdtable);
 pdtable =reshape(pdtable, [30,30]);
 
 %% Circular Histogram of PDs
@@ -65,6 +87,7 @@ theta = reshape((theta).', 1, []);
 his = polarhistogram(theta, 36);
 
 %% Put PDs in 30x30 heatmap
+
 figure
 fig = heatmap(pdtable);
 % jet_wrap = vertcat(jet,flipud(jet));
@@ -72,10 +95,9 @@ fig.Colormap = hsv;
 fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
 fig.GridVisible = 'off';
 
-
 %% randomly select stimulation neuron
 
 %% simulate circular stimulation
-i = 20;  %current in µA
-k = 1292; %space constant in µa/mm^2 (Stoney,et al)
-r = (i^2)/k; %radius of activation in mm
+% i = 20;  %current in µA
+% k = 1292; %space constant in µa/mm^2 (Stoney,et al)
+% r = (i^2)/k; %radius of activation in mm
