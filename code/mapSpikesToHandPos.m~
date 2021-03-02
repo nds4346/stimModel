@@ -150,7 +150,7 @@ activated = find(activate);
 
 %% activate neurons for a specific movement to a certain Hz
 trial = 1; %chose trial 
-hz = 0.04; %frequency of activation - 0.01 more than max of trial
+hz = 0.2; %frequency of activation
 startMove_idx = 10; %time you want to start movement
 stimStart_idx = 20; %time you want to start stim at
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
@@ -168,9 +168,9 @@ end
 
 %% heatmap of pre-stim firing rates, stim firing rates, and post-stim firing rates
 
-pre_stim = reshape(td_stim(trial).VAE_firing_rates(startMove_idx,:), map);
-during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), map);
-post_stim = reshape(td_stim(trial).VAE_firing_rates(stimEnd_idx,:), map);
+pre_stim = reshape(td_stim(trial).VAE_firing_rates(startMove_idx,:), [30 30]);
+during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), [30 30]);
+post_stim = reshape(td_stim(trial).VAE_firing_rates(stimEnd_idx,:), [30 30]);
 
 figure();
 heatmap(pre_stim);
