@@ -27,13 +27,13 @@ map = sqrt(numel(firing_rates(1,:)));
 map = [map map];
 
 %% IF USING PARTIAL DATA SET: cut off first elements of td to match td time bins with firing_rates
-td.acc(1:30000,:) = [];
-td.pos(1:30000,:) = [];
-td.vel(1:30000,:) = [];
-td.joint_vel(1:30000,:) = [];
-td.S1_spikes(1:30000,:) = [];
-td.speed(1:30000,:) = [];
-td.vel_rect(1:30000,:) = [];
+% td.acc(1:30000,:) = [];
+% td.pos(1:30000,:) = [];
+% td.vel(1:30000,:) = [];
+% td.joint_vel(1:30000,:) = [];
+% td.S1_spikes(1:30000,:) = [];
+% td.speed(1:30000,:) = [];
+% td.vel_rect(1:30000,:) = [];
 %% match up data lengths
 
 field_len = length(td.vel);
@@ -102,7 +102,7 @@ hist(pdtable);
 pdtable =reshape(pdtable, map);
 
 %% Circular Histogram of PDs
-figure();
+figure();set(gcf,'Color','White');
 theta = deg2rad(pdtable);
 theta = reshape((theta).', 1, []);
 his = polarhistogram(theta, 36);
@@ -110,8 +110,9 @@ title('Histogram of PDs')
 
 %% Put PDs in 30x30 heatmap
 
-figure();
-fig = heatmap(pdtable);
+
+fig = heatmap(pdtable);set(gcf,'Color','White');
+fig.CellLabelColor = 'none';
 % jet_wrap = vertcat(jet,flipud(jet));
 fig.Colormap = hsv;
 fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
@@ -129,28 +130,37 @@ neuron_location(:,2) = j';
 
 %select stim params
 neuron = 435; %number from 1-900
-i = 100; %current in µA
+current = [20, 40, 60 80 100]; %current in µA
 k = 1292; %space constant in µA/mm^2
-r = sqrt(i/k); %radius in mm
-r = round(r*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
+clear rad;
+for i = 1:numel(current)
+    r(i) = sqrt(current(i)/k); %radius in mm
+    rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
+end
 
 i = neuron_location(neuron,1);
 j = neuron_location(neuron,2);
 
-for n = 1:numel(neuron_location(:,1))
-    if sqrt((neuron_location(n,1) - i)^2 + (neuron_location(n,2)-j)^2) < r
-        activate(n) = 1;
-    else
-        activate(n) = 0;
+for x =1:numel(rad)
+    for n = 1:numel(neuron_location(:,1))
+        if sqrt((neuron_location(n,1) - i)^2 + (neuron_location(n,2)-j)^2) < rad(x)
+            activate(x,n) = 1;
+        else
+            activate(x,n) = 0;
+        end
     end
 end
-
-activated = find(activate);
+clear activated
+for x=1:numel(rad)
+    activated(x).rad= find(activate(x,:));
+end
 
 
 %% activate neurons for a specific movement to a certain Hz
-trial = 1; %chose trial 
-hz = 0.2; %frequency of activation
+trial =[1]; %chose trial 
+hz = 0.04; %firing rates from file (x spikes per bin)
+binSize = 0.050; %bin size in seconds
+rates_inHz = hz/binSize; %converting to firing rate to Hz 
 startMove_idx = 10; %time you want to start movement
 stimStart_idx = 20; %time you want to start stim at
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
@@ -158,19 +168,30 @@ stimEnd_idx = stimLength_idx + 1; %time of start post-stim movement
 endMove_idx = 30; %time you want to end movement
 
 % plot movement reach
-figure();
-plot(td_trim(trial).pos(startMove_idx:endMove_idx,1),td_trim(trial).pos(startMove_idx:endMove_idx,2));
-
-td_stim = td_trim; % resets previous stim
-for n = 1:numel(activated)
-    td_stim(trial).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n)) = hz;
+for x = 1:numel(trial)
+    figure();
+    plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2));
 end
 
-%% heatmap of pre-stim firing rates, stim firing rates, and post-stim firing rates
+td_stim = td_trim; % resets previous stim
+for x = 1:numel(trial)
+    for n = 1:numel(activated)
+        for p = 1:numel(activated(x).rad(n))
+            td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n).rad(p)) = hz;
+            during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), map);
+            heatmap(during_stim);
+            hold on
+            title('Firing Rates during stim for different activation currents')
+        end
+    end
+    legend('20', '40', '60', '80', '100')
+end
+%% heatmap of pre-stim firing rates, stim firing rates, and post-stim firing rates using best current 
+% Make sure to redo above section with best current if multiple (pick one in current array)
 
-pre_stim = reshape(td_stim(trial).VAE_firing_rates(startMove_idx,:), [30 30]);
-during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), [30 30]);
-post_stim = reshape(td_stim(trial).VAE_firing_rates(stimEnd_idx,:), [30 30]);
+pre_stim = reshape(td_stim(trial).VAE_firing_rates(startMove_idx,:), map);
+during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), map);
+post_stim = reshape(td_stim(trial).VAE_firing_rates(stimEnd_idx,:), map);
 
 figure();
 heatmap(pre_stim);
