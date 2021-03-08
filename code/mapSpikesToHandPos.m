@@ -150,7 +150,7 @@ neuron_location(:,2) = j';
 %% Select neuron to stim and calculate radius of activation
 
 %select stim params
-neuron = [338 739]; %number from 1-900
+neuron = [338]; %number from 1-900
 current = [20 60 100]; %current in µA
 k = 1292; %space constant in µA/mm^2
 clear rad;
@@ -184,15 +184,15 @@ end
 
 
 %% activate neurons for a specific movement to a certain Hz
-trial =[830]; %chose trial 
-hz = 0.35; %firing rates from file (x spikes per bin)
+trial =[222 830 27]; %chose trial 
+hz = 0.65; %firing rates from file (x spikes per bin)
 binSize = 0.050; %bin size in seconds
 rates_inHz = hz/binSize; %converting to firing rate to Hz  ~15 Hz for now
 startMove_idx = 10; %time you want to start movement
-stimStart_idx = 20; %time you want to start stim at
+stimStart_idx = 12; %time you want to start stim at
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
 stimEnd_idx = stimLength_idx + 1; %time of start post-stim movement 
-endMove_idx = 30; %time you want to end movement
+endMove_idx = 23; %time you want to end movement
 
 % plot movement reach
 for x = 1:numel(trial)
@@ -200,14 +200,16 @@ for x = 1:numel(trial)
     plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2));
     hold on
     plot(td_trim(trial(x)).pos(startMove_idx, 1),td_trim(trial(x)).pos(startMove_idx,2), '*')
+    plot(td_trim(trial(x)).pos(stimStart_idx, 1),td_trim(trial(x)).pos(stimStart_idx,2), '*')
+    plot(td_trim(trial(x)).pos(stimEnd_idx, 1),td_trim(trial(x)).pos(stimEnd_idx,2), '*')
     plot(td_trim(trial(x)).pos(endMove_idx, 1),td_trim(trial(x)).pos(endMove_idx,2), '*')
     title('Hand Position During Movement Window')
     xlabel('x-hand position')
     ylabel('y-hand position')
-    legend('movement', 'starting point', 'end point', 'Location', 'northwest')
+    legend('movement', 'starting point', 'stim start', 'stim end' , 'end point', 'Location', 'northwest')
 end
 
-
+%%
 current = [current current current];
 for x = 1:numel(trial)
     for n = 1:numel(activated)
@@ -223,35 +225,35 @@ for x = 1:numel(trial)
 end
 %% heatmap of pre-stim firing rates, stim firing rates, and post-stim firing rates using best current 
 % Make sure to redo above section with best current if multiple (pick one in current array)
-
-pre_stim = reshape(td_stim(trial).VAE_firing_rates(startMove_idx,:), map);
-during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), map);
-post_stim = reshape(td_stim(trial).VAE_firing_rates(stimEnd_idx,:), map);
-
-figure();
-heatmap(pre_stim);
-title('Firing rates before stim')
-caxis([0 0.04])
-figure();
-heatmap(during_stim);
-title('Firing rates during stim')
-caxis([0 0.04])
-figure();
-heatmap(post_stim);
-title('Firing rates after stim')
-caxis([0 0.04])
+for t = 1:numel(trial)
+    pre_stim = reshape(td_stim(trial(t)).VAE_firing_rates(startMove_idx,:), map);
+    during_stim = reshape(td_stim(trial(t)).VAE_firing_rates(stimStart_idx,:), map);
+    post_stim = reshape(td_stim(trial(t)).VAE_firing_rates(stimEnd_idx,:), map);
+    
+    figure();set(gcf,'Color','White');
+    heatmap(pre_stim,'GridVisible', 'off');
+    title('Firing rates before stim')
+    caxis([0 hz])
+    figure();set(gcf,'Color','White');
+    heatmap(during_stim, 'GridVisible', 'off');
+    title('Firing rates during stim')
+    caxis([0 hz])
+    figure();set(gcf,'Color','White');
+    heatmap(post_stim, 'GridVisible', 'off');
+    title('Firing rates after stim')
+    caxis([0 hz])
+end
 
 
 
 
 %% Use decoder predictors to change velocity, compute movement output from velocities
 td_ex = td_trim; %example td
-td_ex = td_trim; %example td
 for x = 1:numel(trial)
     hold off
-    for ns = 1:numel(activated(:,1))
+    for ns = 1:numel(activated(1,:))
             figure();set(gcf,'Color','White');
-        for n = 1:numel(activated(1,:))
+        for n = 1:numel(activated(:,1))
             td_stim = td_trim; % resets previous stim
             for p = 1:numel(activated(n,ns).rad)
                 td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n,ns).rad(p)) = hz;
@@ -266,12 +268,13 @@ for x = 1:numel(trial)
             end
             plot(td_stim(trial(x)).pos(startMove_idx:endMove_idx,1),td_stim(trial(x)).pos(startMove_idx:endMove_idx,2)) %plot stim of decoded movement
             hold on
-            plot(td_stim(trial(x)).pos(stimStart_idx:stimLength_idx,1),td_stim(trial(x)).pos(stimStart_idx:stimLength_idx,2), '*') %plot stim duration
-            plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
-            plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
             title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
         end
-        legend('effect of stim on movement ' + string(current(n-2)) + ' µA)','stim duration '+ string(current(n-2)) + ' µA','effect of stim on movement ' + string(current(n-1)) + ' µA', 'stim duration ' + string(current(n-1)) + ' µA','effect of stim on movement ' + string(current(n)) + ' µA', 'stim duration ' + string(current(n)) + ' µA', 'actual movement', 'decoded movement', 'Location', 'northwestoutside')
+        plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
+        plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
+        legend('effect of stim on movement ' + string(current(n-2)) + ' µA)','effect of stim on movement ' + string(current(n-1)) + ' µA','effect of stim on movement ' + string(current(n)) + ' µA',  'actual movement', 'decoded movement', 'Location', 'northwestoutside')
+        xlabel('X-hand position (cm)')
+        ylabel('Y-hand position (cm)')
     end
 end
 
