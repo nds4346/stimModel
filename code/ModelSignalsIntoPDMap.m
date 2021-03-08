@@ -100,10 +100,10 @@ colormap(hsv);
 colorbar;
 % fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
 % fig.GridVisible = 'off';
+% fig.Colormap = hsv;
+fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
+fig.GridVisible = 'off';
 
 %% randomly select stimulation neuron
 
-%% simulate circular stimulation
-% i = 20;  %current in µA
-% k = 1292; %space constant in µa/mm^2 (Stoney,et al)
-% r = (i^2)/k; %radius of activation in mm
+

@@ -120,8 +120,8 @@ end
 figure();set(gcf,'Color','White')
 hist(PDdiff)
 title('Difference between actual PDs and decoder PDs')
-xticks([-180 0 180])
-xlabel('Angular difference (actual - decoded = difference)')
+xticks([-180 180])
+xlabel('
 
 %% Circular Histogram of PDs
 figure();set(gcf,'Color','White');
