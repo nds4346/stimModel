@@ -61,7 +61,7 @@ hand_vel = td.vel;
 lr = 0.01;
 dec = rand(size(fr_lagged,2),2)-0.5;
 bias = [0,0];
-num_iters = 250;
+num_iters = 500;
 dropout_rate = 0.90;
 
 vaf_list_drop = zeros(num_iters,2);
@@ -98,7 +98,7 @@ vaf_pred = compute_vaf(hand_vel,hand_vel_hat)
 td.hand_vel_hat = hand_vel_hat;
 
 figure();set(gcf,'Color','White')
-plot(hand_vel(:,2),hand_vel_hat(:,2),'.')
+plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
 ylabel('Decoded hand velocity (cm/s)')
 xlabel('Hand velocity (cm/s)')
 
