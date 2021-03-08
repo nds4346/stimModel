@@ -13,8 +13,9 @@ load([pathname filesep filename]);
 
 %% load in firing rates
 %fr_file = 'vae_rates_Han_20160325_RW_dropout90_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
-fr_file = 'vae_rates_Han_20160325_RW_dropout95_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
+%fr_file = 'vae_rates_Han_20160325_RW_dropout95_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
 %fr_file = 'firing_rates_20210223.csv';
+fr_file = 'vae_rates_Han_20160325_RW_dropout70_lambda1.0_learning1e-06_n-epochs5000_n-neurons1600_2021-03-07-142347.csv';
 %make firing rate array
 firing_rates = readtable([pathname,filesep, fr_file]);
 firing_rates = firing_rates{:,:};
@@ -62,8 +63,9 @@ dec = fr_lagged\hand_vel;
 %% find predicted hand velocities using firing rates
 % A*dec = b, A\b = dec
 hand_vel_hat = fr_lagged*dec;
+td.hand_vel_hat = td.dec_vel;
 
-figure();
+figure();set(gcf,'Color','White')
 plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
 ylabel('Decoded hand velocity (cm/s)')
 xlabel('Hand velocity (cm/s)')
@@ -101,6 +103,26 @@ figure();
 hist(pdtable);
 pdtable =reshape(pdtable, map);
 
+for n = 1:numel(dec(:,1))
+    pdtable_decoded(n) = atan2(dec(n,2), dec(n,1));
+end
+
+pdtable_decoded =rad2deg(pdtable_decoded);
+pdtable_decoded(pdtable_decoded<0) = pdtable_decoded(pdtable_decoded<0)+360;
+figure();
+hist(pdtable_decoded);
+pdtable_decoded =reshape(pdtable_decoded, map);
+
+%% histogram of angular differences
+for x = 1:numel(pdtable)
+    PDdiff(x) = pdtable(x)-pdtable_decoded(x);
+end
+figure();set(gcf,'Color','White')
+hist(PDdiff)
+title('Difference between actual PDs and decoder PDs')
+xticks([-180 0 180])
+xlabel('Angular difference (actual - decoded = difference)')
+
 %% Circular Histogram of PDs
 figure();set(gcf,'Color','White');
 theta = deg2rad(pdtable);
@@ -109,8 +131,7 @@ his = polarhistogram(theta, 36);
 title('Histogram of PDs')
 
 %% Put PDs in 30x30 heatmap
-
-
+figure();set(gcf,'Color','White');
 fig = heatmap(pdtable);set(gcf,'Color','White');
 fig.CellLabelColor = 'none';
 % jet_wrap = vertcat(jet,flipud(jet));
@@ -129,8 +150,8 @@ neuron_location(:,2) = j';
 %% Select neuron to stim and calculate radius of activation
 
 %select stim params
-neuron = 435; %number from 1-900
-current = [100]; %current in µA
+neuron = [338 739]; %number from 1-900
+current = [20 60 100]; %current in µA
 k = 1292; %space constant in µA/mm^2
 clear rad;
 for i = 1:numel(current)
@@ -138,29 +159,35 @@ for i = 1:numel(current)
     rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
 end
 
-i = neuron_location(neuron,1);
-j = neuron_location(neuron,2);
-
+for ns = 1:numel(neuron)
+    i(ns) = neuron_location(neuron(ns),1);
+    j(ns) = neuron_location(neuron(ns),2);
+end
+clear activate
 for x =1:numel(rad)
     for n = 1:numel(neuron_location(:,1))
-        if sqrt((neuron_location(n,1) - i)^2 + (neuron_location(n,2)-j)^2) < rad(x)
-            activate(x,n) = 1;
-        else
-            activate(x,n) = 0;
+        for ns = 1:numel(neuron)
+            if sqrt((neuron_location(n,1) - i(ns))^2 + (neuron_location(n,2)-j(ns))^2) <= rad(x)
+                activate(x,ns).neuron(n) = 1;
+            else
+                activate(x,ns).neuron(n) = 0;
+            end
         end
     end
 end
 clear activated
 for x=1:numel(rad)
-    activated(x).rad= find(activate(x,:));
+    for ns = 1:numel(neuron)
+        activated(x,ns).rad= find(activate(x,ns).neuron);
+    end
 end
 
 
 %% activate neurons for a specific movement to a certain Hz
-trial =[1]; %chose trial 
-hz = 0.04; %firing rates from file (x spikes per bin)
+trial =[830]; %chose trial 
+hz = 0.35; %firing rates from file (x spikes per bin)
 binSize = 0.050; %bin size in seconds
-rates_inHz = hz/binSize; %converting to firing rate to Hz 
+rates_inHz = hz/binSize; %converting to firing rate to Hz  ~15 Hz for now
 startMove_idx = 10; %time you want to start movement
 stimStart_idx = 20; %time you want to start stim at
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
@@ -169,23 +196,29 @@ endMove_idx = 30; %time you want to end movement
 
 % plot movement reach
 for x = 1:numel(trial)
-    figure();
+    figure();set(gcf,'Color','White');
     plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2));
+    hold on
+    plot(td_trim(trial(x)).pos(startMove_idx, 1),td_trim(trial(x)).pos(startMove_idx,2), '*')
+    plot(td_trim(trial(x)).pos(endMove_idx, 1),td_trim(trial(x)).pos(endMove_idx,2), '*')
     title('Hand Position During Movement Window')
     xlabel('x-hand position')
     ylabel('y-hand position')
+    legend('movement', 'starting point', 'end point', 'Location', 'northwest')
 end
 
-td_stim = td_trim; % resets previous stim
+
+current = [current current current];
 for x = 1:numel(trial)
     for n = 1:numel(activated)
+        td_stim = td_trim; % resets previous stim
         for p = 1:numel(activated(n).rad)
             td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n).rad(p)) = hz;
         end
-         during_stim = reshape(td_stim(trial).VAE_firing_rates(stimStart_idx,:), map);
-         figure
-         heatmap(during_stim);
-         title('Firing Rates during stim for different activation currents ' + string(current(n)) + ' µA')
+        during_stim = reshape(td_stim(trial(x)).VAE_firing_rates(stimStart_idx,:), map);
+        figure();set(gcf,'Color','White');
+        heatmap(during_stim, 'GridVisible', 'off');
+        title('Firing Rates during stim for different activation currents ' + string(current(n)) + ' µA')
     end
 end
 %% heatmap of pre-stim firing rates, stim firing rates, and post-stim firing rates using best current 
@@ -208,26 +241,58 @@ heatmap(post_stim);
 title('Firing rates after stim')
 caxis([0 0.04])
 
-%% Use decoder predictors to change velocity
-td_stim(trial).vel(startMove_idx:endMove_idx,:) = td_stim(trial).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec;
 
 
-%% compare movement output using new vel
-figure();
-plot(td_trim(trial).vel(startMove_idx:endMove_idx,1), 'r')
-hold on
-plot(td_stim(trial).vel(startMove_idx:endMove_idx,1), 'b')
-plot((stimStart_idx-startMove_idx+1):(stimLength_idx - startMove_idx+1),td_stim(trial).vel(stimStart_idx:stimLength_idx,1),'*')
-title('Hand x-velocity (cm/s)')
-legend('without stim', 'with stim', 'stim period')
 
-figure();
-plot(td_trim(trial).vel(startMove_idx:endMove_idx,2), 'r')
-hold on
-plot(td_stim(trial).vel(startMove_idx:endMove_idx,2), 'b')
-plot((stimStart_idx-startMove_idx+1):(stimLength_idx - startMove_idx+1),td_stim(trial).vel(stimStart_idx:stimLength_idx,2),'*')
-title('Hand y-velocity(cm/s)')
-legend('without stim', 'with stim', 'stim period')
+%% Use decoder predictors to change velocity, compute movement output from velocities
+td_ex = td_trim; %example td
+td_ex = td_trim; %example td
+for x = 1:numel(trial)
+    hold off
+    for ns = 1:numel(activated(:,1))
+            figure();set(gcf,'Color','White');
+        for n = 1:numel(activated(1,:))
+            td_stim = td_trim; % resets previous stim
+            for p = 1:numel(activated(n,ns).rad)
+                td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n,ns).rad(p)) = hz;
+            end
+            td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_trim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec; %regular decoded hand vel
+            td_stim(trial(x)).vel(startMove_idx:endMove_idx,:) = td_stim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec; %stim decoded hand vel
+            for time = stimStart_idx:stimLength_idx
+                td_stim(trial(x)).pos(time,1) = td_stim(trial(x)).pos(time-1,1) + (td_stim(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
+                td_stim(trial(x)).pos(time,2) = td_stim(trial(x)).pos(time-1,2) + (td_stim(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
+                td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
+                td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
+            end
+            plot(td_stim(trial(x)).pos(startMove_idx:endMove_idx,1),td_stim(trial(x)).pos(startMove_idx:endMove_idx,2)) %plot stim of decoded movement
+            hold on
+            plot(td_stim(trial(x)).pos(stimStart_idx:stimLength_idx,1),td_stim(trial(x)).pos(stimStart_idx:stimLength_idx,2), '*') %plot stim duration
+            plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
+            plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
+            title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
+        end
+        legend('effect of stim on movement ' + string(current(n-2)) + ' µA)','stim duration '+ string(current(n-2)) + ' µA','effect of stim on movement ' + string(current(n-1)) + ' µA', 'stim duration ' + string(current(n-1)) + ' µA','effect of stim on movement ' + string(current(n)) + ' µA', 'stim duration ' + string(current(n)) + ' µA', 'actual movement', 'decoded movement', 'Location', 'northwestoutside')
+    end
+end
+
+  
+
+% Plots of hand vel
+% figure();
+% plot(td_trim(trial).vel(startMove_idx:endMove_idx,1), 'r')
+% hold on
+% plot(td_stim(trial).vel(startMove_idx:endMove_idx,1), 'b')
+% plot((stimStart_idx-startMove_idx+1):(stimLength_idx - startMove_idx+1),td_stim(trial).vel(stimStart_idx:stimLength_idx,1),'*')
+% title('Hand x-velocity (cm/s)')
+% legend('without stim', 'with stim', 'stim period')
+% 
+% figure();
+% plot(td_trim(trial).vel(startMove_idx:endMove_idx,2), 'r')
+% hold on
+% plot(td_stim(trial).vel(startMove_idx:endMove_idx,2), 'b')
+% plot((stimStart_idx-startMove_idx+1):(stimLength_idx - startMove_idx+1),td_stim(trial).vel(stimStart_idx:stimLength_idx,2),'*')
+% title('Hand y-velocity(cm/s)')
+% legend('without stim', 'with stim', 'stim period')
 
 
 
