@@ -14,17 +14,17 @@ import matplotlib.pyplot as plt
 argparser = argparse.ArgumentParser()
 argparser.add_argument('--batch_size', type=int, default=1024)
 argparser.add_argument('--latent_shape', type=int, default=[40, 40], help='dimensions of S1 map')
-argparser.add_argument('--n_epochs', type=int, default=80)
+argparser.add_argument('--n_epochs', type=int, default=600)
 argparser.add_argument('--sampling', type=str, default='poisson')
 argparser.add_argument('--n_samples', type=int, default=20)
 argparser.add_argument('--layers', type=int, default=[20, 40])
 argparser.add_argument('--cuda', action='store_true')
 argparser.add_argument('--sigma', type=float, default=2.0, help='neibourhood factor')
-argparser.add_argument('--eta', type=float, default=0.001, help='learning rate')
+argparser.add_argument('--eta', type=float, default=0.00001, help='learning rate')
 argparser.add_argument('--lateral', type=str, default='mexican', help='type of lateral influence')
-argparser.add_argument('--lambda_l', type=float, default=5, help='strength of lateral influence')
+argparser.add_argument('--lambda_l', type=float, default=1, help='strength of lateral influence')
 argparser.add_argument('--default_rate', type=float, default=0.1, help='expectation of rate')
-argparser.add_argument('--save_path', type=str, default='/tmp/model', help='path of saved model')
+argparser.add_argument('--save_path', type=str, default='D:\\Lab\\Data\\StimModel', help='path of saved model')
 args = argparser.parse_args()
 
 if args.cuda:
@@ -116,7 +116,7 @@ class VAE(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.lateral = torch.from_numpy(lateral).type(torch.FloatTensor) # not positive definite
-        self.dropout = nn.Dropout(0.70)
+        self.dropout = nn.Dropout(0.75)
         
     def forward(self, inputs):
         if args.cuda:
@@ -203,9 +203,9 @@ def vaf(x,xhat):
 
 #%%
 
-my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointVel_50ms.txt', delimiter=',')[:,:]
-train = my_data[:15000]
-test = my_data[15000:]
+my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointCart_50ms.txt', delimiter=',')[:,:]
+train = my_data[:10000]
+test = my_data[10000:]
 
 x_tr = torch.from_numpy(train[:,:]).type(torch.FloatTensor)
 y_tr = torch.from_numpy(train[:,:]).type(torch.FloatTensor)
@@ -299,11 +299,11 @@ writer.close()
 
 #%% run test data set through model and save firing rates
 
-my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointVel_50ms.txt', delimiter=',')[:,:]
+my_data = np.genfromtxt(r'D:\Lab\Data\StimModel\Han_20201204_RT3D_SmoothNormalizedJointCart_50ms.txt', delimiter=',')[:,:]
 my_data = torch.from_numpy(my_data[:,:]).type(torch.FloatTensor)
 rates = vae.encoder(my_data)
 rates = rates.detach().numpy()
-np.savetxt("D:\\Lab\\Data\\StimModel\\vae_rates_Han_20201204_RT3D_50ms.csv", rates,delimiter=",")
+np.savetxt("D:\\Lab\\Data\\StimModel\\vae_rates_Han_20201204_RT3D_jointCart_50ms.csv", rates,delimiter=",")
 
 my_data_pred = vae(my_data)
 test_vaf = vaf(my_data.detach().numpy(),my_data_pred.detach().numpy())
