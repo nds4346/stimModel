@@ -2,14 +2,15 @@
 filename = 'Han_201603015_RW_SmoothKin_50ms.mat';
 
 %Nathan's mac path
- pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+%  pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 
 %Joe's windows path
-%pathname = 'D:\Lab\Data\StimModel';
+pathname = 'D:\Lab\Data\StimModel';
 
 load([pathname filesep filename]);
 
-
+rel= version('-release');
+is_old_matlab = str2num(rel(1:4)) < 2018;
 
 %% load in firing rates
 %fr_file = 'vae_rates_Han_20160325_RW_dropout90_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
@@ -61,8 +62,8 @@ hand_vel = td.vel;
 lr = 0.01;
 dec = rand(size(fr_lagged,2),2)-0.5;
 bias = [0,0];
-num_iters = 250;
-dropout_rate = 0.90;
+num_iters = 400;
+dropout_rate = 0.8;
 
 vaf_list_drop = zeros(num_iters,2);
 vaf_list_mdl = zeros(num_iters,2);
@@ -90,15 +91,23 @@ dec = dec*(1-dropout_rate);
 %% predict hand velocity and get vaf
 
 hand_vel_hat = fr_lagged*dec + bias;
-
-vaf_pred = compute_vaf(hand_vel,hand_vel_hat);
-
+vaf_pred = compute_vaf(hand_vel,hand_vel_hat)
+b = hand_vel_hat\hand_vel
 %% find predicted hand velocities using firing rates
 % A*dec = b, A\b = dec
 td.hand_vel_hat = hand_vel_hat;
 
 figure();set(gcf,'Color','White')
-plot(hand_vel(:,2),hand_vel_hat(:,2),'.')
+subplot(1,2,1)
+plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
+hold on;
+plot([-30,30],[-30,30],'k--');
+ylabel('Decoded hand velocity (cm/s)')
+xlabel('Hand velocity (cm/s)')
+subplot(1,2,2)
+plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
+hold on;
+plot([-30,30],[-30,30],'k--');
 ylabel('Decoded hand velocity (cm/s)')
 xlabel('Hand velocity (cm/s)')
 
@@ -164,13 +173,18 @@ title('Histogram of PDs')
 
 %% Put PDs in 30x30 heatmap
 figure();set(gcf,'Color','White');
-fig = heatmap(pdtable_decoded);set(gcf,'Color','White');
-fig.CellLabelColor = 'none';
-% jet_wrap = vertcat(jet,flipud(jet));
-fig.Colormap = hsv;
-fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
-fig.GridVisible = 'off';
-
+if(~is_old_matlab)
+    fig = heatmap(pdtable_decoded);set(gcf,'Color','White');
+    fig.CellLabelColor = 'none';
+    % jet_wrap = vertcat(jet,flipud(jet));
+    fig.Colormap = hsv;
+    fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
+    fig.GridVisible = 'off';
+else
+    fig = imagesc(pdtable_decoded);
+    colormap(hsv);
+    colorbar;
+end
 %% Get grid of X and Y coords for 30
 clear neuron_location
 num_rows = map(1);
@@ -283,7 +297,12 @@ for x = 1:numel(trial)
         end
         during_stim = reshape(td_stim(trial(x)).VAE_firing_rates(stimStart_idx,:), map);
         figure();set(gcf,'Color','White');
-        heatmap(during_stim, 'GridVisible', 'off');
+        if(~is_old_matlab)
+            heatmap(during_stim, 'GridVisible', 'off');
+        else
+            imagesc(during_stim);
+            colorbar;
+        end
         title('Firing Rates during stim for different activation currents ' + string(current(n)) + ' µA')
     end
 end
@@ -295,15 +314,27 @@ for t = 1:numel(trial)
     post_stim = reshape(td_stim(trial(t)).VAE_firing_rates(stimEnd_idx,:), map);
     
     figure();set(gcf,'Color','White');
-    heatmap(pre_stim,'GridVisible', 'off');
+    if(~is_old_matlab)
+        heatmap(pre_stim,'GridVisible', 'off');
+    else
+        imagesc(pre_stim);
+    end
     title('Firing rates before stim')
     caxis([0 hz])
     figure();set(gcf,'Color','White');
-    heatmap(during_stim, 'GridVisible', 'off');
+    if(~is_old_matlab)
+        heatmap(during_stim, 'GridVisible', 'off');
+    else
+        imagesc(during_stim);
+    end
     title('Firing rates during stim')
     caxis([0 hz])
     figure();set(gcf,'Color','White');
-    heatmap(post_stim, 'GridVisible', 'off');
+    if(~is_old_matlab)
+        heatmap(post_stim, 'GridVisible', 'off');
+    else
+        imagesc(post_stim);
+    end
     title('Firing rates after stim')
     caxis([0 hz])
 end
@@ -313,16 +344,15 @@ end
 td_ex = td_trim; %example td
 
 for x = 1:numel(trial)
-    figure
-    td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_ex(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:) * dec; %regular decoded hand vel
+    figure;
+%     td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_ex(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:) * dec + bias; %regular decoded hand vel
     plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
-    for time = startMove_idx:endMove_idx
-        td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
-        td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
+    hold on;
+    for time = startMove_idx+1:endMove_idx
+        td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).hand_vel_hat(time-1,1)*binSize);%stim effect on hand pos in x dir
+        td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).hand_vel_hat(time-1,2)*binSize);%stim effect on hand pos in y dir
     end
     plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
-    hold on
-    plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
 end
 
 %% Use decoder predictors to change velocity, compute movement output from velocities
@@ -339,10 +369,10 @@ for x = 1:numel(trial)
             td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_ex(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:) * dec +bias; %regular decoded hand vel
             td_stim(trial(x)).vel(startMove_idx:endMove_idx,:) = td_stim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)* dec + bias; %stim decoded hand vel
             for time = startMove_idx:endMove_idx
-                td_stim(trial(x)).pos(time,1) = td_stim(trial(x)).pos(time-1,1) + (td_stim(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
-                td_stim(trial(x)).pos(time,2) = td_stim(trial(x)).pos(time-1,2) + (td_stim(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
-                td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
-                td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
+                td_stim(trial(x)).pos(time,1) = td_stim(trial(x)).pos(time-1,1) + (td_stim(trial(x)).vel(time-1,1)*binSize);%stim effect on hand pos in x dir
+                td_stim(trial(x)).pos(time,2) = td_stim(trial(x)).pos(time-1,2) + (td_stim(trial(x)).vel(time-1,2)*binSize);%stim effect on hand pos in y dir
+                td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time-1,1)*binSize);%stim effect on hand pos in x dir
+                td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).vel(time-1,2)*binSize);%stim effect on hand pos in y dir
             end
             plot(td_stim(trial(x)).pos(startMove_idx:endMove_idx,1),td_stim(trial(x)).pos(startMove_idx:endMove_idx,2)) %plot stim of decoded movement
             hold on
