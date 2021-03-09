@@ -2,10 +2,10 @@
 filename = 'Han_201603015_RW_SmoothKin_50ms.mat';
 
 %Nathan's mac path
-% pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+ pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 
 %Joe's windows path
-pathname = 'D:\Lab\Data\StimModel';
+%pathname = 'D:\Lab\Data\StimModel';
 
 load([pathname filesep filename]);
 
@@ -91,7 +91,7 @@ dec = dec*(1-dropout_rate);
 
 hand_vel_hat = fr_lagged*dec + bias;
 
-vaf_pred = compute_vaf(hand_vel,hand_vel_hat)
+vaf_pred = compute_vaf(hand_vel,hand_vel_hat);
 
 %% find predicted hand velocities using firing rates
 % A*dec = b, A\b = dec
@@ -124,16 +124,16 @@ td_trim = td_trim(x);
 
 %% calculate PDs for signals
 %call model output signals for this
-params.out_signals = 'VAE_firing_rates';
-params.in_signals = {'vel'};
-params.num_boots = 0;
-pdtable = getTDPDs(td_trim, params);
-
-pdtable =rad2deg(pdtable.velPD);
-pdtable(pdtable<0) = pdtable(pdtable<0)+360;
-figure();
-hist(pdtable);
-pdtable =reshape(pdtable, map);
+% params.out_signals = 'VAE_firing_rates';
+% params.in_signals = {'vel'};
+% params.num_boots = 0;
+% pdtable = getTDPDs(td_trim, params);
+% 
+% pdtable =rad2deg(pdtable.velPD);
+% pdtable(pdtable<0) = pdtable(pdtable<0)+360;
+% figure();
+% hist(pdtable);
+% pdtable =reshape(pdtable, map);
 
 for n = 1:numel(dec(:,1))
     pdtable_decoded(n) = atan2(dec(n,2), dec(n,1));
@@ -157,14 +157,14 @@ xlabel('Angular difference (actual - decoded = difference)')
 
 %% Circular Histogram of PDs
 figure();set(gcf,'Color','White');
-theta = deg2rad(pdtable);
+theta = deg2rad(pdtable_decoded);
 theta = reshape((theta).', 1, []);
 his = polarhistogram(theta, 36);
 title('Histogram of PDs')
 
 %% Put PDs in 30x30 heatmap
 figure();set(gcf,'Color','White');
-fig = heatmap(pdtable);set(gcf,'Color','White');
+fig = heatmap(pdtable_decoded);set(gcf,'Color','White');
 fig.CellLabelColor = 'none';
 % jet_wrap = vertcat(jet,flipud(jet));
 fig.Colormap = hsv;
@@ -191,6 +191,38 @@ for i = 1:numel(current)
     rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
 end
 
+for ns = 1:numel(neuron)
+    i(ns) = neuron_location(neuron(ns),1);
+    j(ns) = neuron_location(neuron(ns),2);
+end
+clear activate
+for x =1:numel(rad)
+    for n = 1:numel(neuron_location(:,1))
+        for ns = 1:numel(neuron)
+            if sqrt((neuron_location(n,1) - i(ns))^2 + (neuron_location(n,2)-j(ns))^2) <= rad(x)
+                activate(x,ns).neuron(n) = 1;
+            else
+                activate(x,ns).neuron(n) = 0;
+            end
+        end
+    end
+end
+clear activated
+for x=1:numel(rad)
+    for ns = 1:numel(neuron)
+        activated(x,ns).rad= find(activate(x,ns).neuron);
+    end
+end
+%select stim params
+neuron = [338]; %number from 1-900
+current = [20 60 100]; %current in µA
+k = 1292; %space constant in µA/mm^2
+clear rad;
+for i = 1:numel(current)
+    r(i) = sqrt(current(i)/k); %radius in mm
+    rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
+end
+ 
 for ns = 1:numel(neuron)
     i(ns) = neuron_location(neuron(ns),1);
     j(ns) = neuron_location(neuron(ns),2);
@@ -277,7 +309,21 @@ for t = 1:numel(trial)
 end
 
 
+%% plot decoded movement
+td_ex = td_trim; %example td
 
+for x = 1:numel(trial)
+    figure
+    td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_ex(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:) * dec; %regular decoded hand vel
+    plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
+    for time = startMove_idx:endMove_idx
+        td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
+        td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
+    end
+    plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
+    hold on
+    plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
+end
 
 %% Use decoder predictors to change velocity, compute movement output from velocities
 td_ex = td_trim; %example td
@@ -290,9 +336,9 @@ for x = 1:numel(trial)
             for p = 1:numel(activated(n,ns).rad)
                 td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n,ns).rad(p)) = hz;
             end
-            td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_trim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec; %regular decoded hand vel
-            td_stim(trial(x)).vel(startMove_idx:endMove_idx,:) = td_stim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec; %stim decoded hand vel
-            for time = stimStart_idx:stimLength_idx
+            td_ex(trial(x)).vel(startMove_idx:endMove_idx,:) = td_ex(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:) * dec +bias; %regular decoded hand vel
+            td_stim(trial(x)).vel(startMove_idx:endMove_idx,:) = td_stim(trial(x)).VAE_firing_rates(startMove_idx:endMove_idx,:)* dec + bias; %stim decoded hand vel
+            for time = startMove_idx:endMove_idx
                 td_stim(trial(x)).pos(time,1) = td_stim(trial(x)).pos(time-1,1) + (td_stim(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
                 td_stim(trial(x)).pos(time,2) = td_stim(trial(x)).pos(time-1,2) + (td_stim(trial(x)).vel(time,2)*binSize);%stim effect on hand pos in y dir
                 td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).vel(time,1)*binSize);%stim effect on hand pos in x dir
