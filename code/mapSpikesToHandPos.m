@@ -2,10 +2,10 @@
 filename = 'Han_201603015_RW_SmoothKin_50ms.mat';
 
 %Nathan's mac path
-%  pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+  pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 
 %Joe's windows path
-pathname = 'D:\Lab\Data\StimModel';
+%pathname = 'D:\Lab\Data\StimModel';
 
 load([pathname filesep filename]);
 
@@ -90,9 +90,9 @@ dec = dec*(1-dropout_rate);
 
 %% predict hand velocity and get vaf
 
-hand_vel_hat = fr_lagged*dec + bias;
-vaf_pred = compute_vaf(hand_vel,hand_vel_hat)
-b = hand_vel_hat\hand_vel
+hand_vel_hat = fr_lagged*dec;  % + bias;
+vaf_pred = compute_vaf(hand_vel,hand_vel_hat);
+b = hand_vel_hat\hand_vel;
 %% find predicted hand velocities using firing rates
 % A*dec = b, A\b = dec
 td.hand_vel_hat = hand_vel_hat;
@@ -102,14 +102,14 @@ subplot(1,2,1)
 plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
 hold on;
 plot([-30,30],[-30,30],'k--');
-ylabel('Decoded hand velocity (cm/s)')
-xlabel('Hand velocity (cm/s)')
+ylabel('Decoded hand x-velocity (cm/s)')
+xlabel('Hand -velocity (cm/s)')
 subplot(1,2,2)
-plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
+plot(hand_vel(:,2),hand_vel_hat(:,2),'.')
 hold on;
 plot([-30,30],[-30,30],'k--');
-ylabel('Decoded hand velocity (cm/s)')
-xlabel('Hand velocity (cm/s)')
+ylabel('Decoded hand y-velocity (cm/s)')
+xlabel('Hand y-velocity (cm/s)')
 
 %% split tds
 %Split TD
@@ -196,7 +196,7 @@ neuron_location(:,2) = j';
 %% Select neuron to stim and calculate radius of activation
 
 %select stim params
-neuron = [338]; %number from 1-900
+neuron = [338 ]; %number from 1-900 1227 1310 545
 current = [20 60 100]; %current in µA
 k = 1292; %space constant in µA/mm^2
 clear rad;
@@ -205,38 +205,6 @@ for i = 1:numel(current)
     rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
 end
 
-for ns = 1:numel(neuron)
-    i(ns) = neuron_location(neuron(ns),1);
-    j(ns) = neuron_location(neuron(ns),2);
-end
-clear activate
-for x =1:numel(rad)
-    for n = 1:numel(neuron_location(:,1))
-        for ns = 1:numel(neuron)
-            if sqrt((neuron_location(n,1) - i(ns))^2 + (neuron_location(n,2)-j(ns))^2) <= rad(x)
-                activate(x,ns).neuron(n) = 1;
-            else
-                activate(x,ns).neuron(n) = 0;
-            end
-        end
-    end
-end
-clear activated
-for x=1:numel(rad)
-    for ns = 1:numel(neuron)
-        activated(x,ns).rad= find(activate(x,ns).neuron);
-    end
-end
-%select stim params
-neuron = [338]; %number from 1-900
-current = [20 60 100]; %current in µA
-k = 1292; %space constant in µA/mm^2
-clear rad;
-for i = 1:numel(current)
-    r(i) = sqrt(current(i)/k); %radius in mm
-    rad(i) = round(r(i)*10); %arbitrary radius of neural squares activated - given each neuron is 0.1 mm from each other 
-end
- 
 for ns = 1:numel(neuron)
     i(ns) = neuron_location(neuron(ns),1);
     j(ns) = neuron_location(neuron(ns),2);
@@ -262,15 +230,15 @@ end
 
 
 %% activate neurons for a specific movement to a certain Hz
-trial =[222 830 27]; %chose trial 
+trial =[ 830 ]; %chose trial 
 hz = 0.65; %firing rates from file (x spikes per bin)
 binSize = 0.050; %bin size in seconds
 rates_inHz = hz/binSize; %converting to firing rate to Hz  ~15 Hz for now
 startMove_idx = 10; %time you want to start movement
-stimStart_idx = 12; %time you want to start stim at
+stimStart_idx = 15; %time you want to start stim at
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
 stimEnd_idx = stimLength_idx + 1; %time of start post-stim movement 
-endMove_idx = 23; %time you want to end movement
+endMove_idx = 30; %time you want to end movement
 
 % plot movement reach
 for x = 1:numel(trial)
@@ -287,7 +255,7 @@ for x = 1:numel(trial)
     legend('movement', 'starting point', 'stim start', 'stim end' , 'end point', 'Location', 'northwest')
 end
 
-%%
+%% Plot radius of activation of different stim currents during movements
 current = [current current current];
 for x = 1:numel(trial)
     for n = 1:numel(activated)
@@ -298,7 +266,7 @@ for x = 1:numel(trial)
         during_stim = reshape(td_stim(trial(x)).VAE_firing_rates(stimStart_idx,:), map);
         figure();set(gcf,'Color','White');
         if(~is_old_matlab)
-            heatmap(during_stim, 'GridVisible', 'off');
+            heatmap(during_stim, 'GridVisible', 'off','Colormap', parula);
         else
             imagesc(during_stim);
             colorbar;
@@ -315,7 +283,7 @@ for t = 1:numel(trial)
     
     figure();set(gcf,'Color','White');
     if(~is_old_matlab)
-        heatmap(pre_stim,'GridVisible', 'off');
+        heatmap(pre_stim,'GridVisible', 'off','Colormap', parula);
     else
         imagesc(pre_stim);
     end
@@ -323,7 +291,7 @@ for t = 1:numel(trial)
     caxis([0 hz])
     figure();set(gcf,'Color','White');
     if(~is_old_matlab)
-        heatmap(during_stim, 'GridVisible', 'off');
+        heatmap(during_stim, 'GridVisible', 'off','Colormap', parula);
     else
         imagesc(during_stim);
     end
@@ -331,7 +299,7 @@ for t = 1:numel(trial)
     caxis([0 hz])
     figure();set(gcf,'Color','White');
     if(~is_old_matlab)
-        heatmap(post_stim, 'GridVisible', 'off');
+        heatmap(post_stim, 'GridVisible', 'off','Colormap', parula);
     else
         imagesc(post_stim);
     end
@@ -353,15 +321,17 @@ for x = 1:numel(trial)
         td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).hand_vel_hat(time-1,2)*binSize);%stim effect on hand pos in y dir
     end
     plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
+    legend('actual movement', 'decoded movement', 'Location', 'northwest')
 end
 
 %% Use decoder predictors to change velocity, compute movement output from velocities
 td_ex = td_trim; %example td
-for x = 1:numel(trial)
+close all
+for x = 1:numel(trial) %number of trials
     hold off
-    for ns = 1:numel(activated(1,:))
+    for ns = 1:numel(activated(1,:)) %number of neuron inputs
             figure();set(gcf,'Color','White');
-        for n = 1:numel(activated(:,1))
+        for n = 1:numel(activated(:,1)) %number of current inputs
             td_stim = td_trim; % resets previous stim
             for p = 1:numel(activated(n,ns).rad)
                 td_stim(trial(x)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(n,ns).rad(p)) = hz;
@@ -377,6 +347,8 @@ for x = 1:numel(trial)
             plot(td_stim(trial(x)).pos(startMove_idx:endMove_idx,1),td_stim(trial(x)).pos(startMove_idx:endMove_idx,2)) %plot stim of decoded movement
             hold on
             title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
+            moveDir(ns, n).current(1:numel(startMove_idx:endMove_idx),1) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,1); %set up for calculating move direction
+            moveDir(ns,n).current(1:numel(startMove_idx:endMove_idx),2) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,2); %set up for calculating move direction
         end
         plot(td_trim(trial(x)).pos(startMove_idx:endMove_idx,1),td_trim(trial(x)).pos(startMove_idx:endMove_idx,2), 'k') %plot actual movement
         plot(td_ex(trial(x)).pos(startMove_idx:endMove_idx,1),td_ex(trial(x)).pos(startMove_idx:endMove_idx,2), 'r') %plot decoded movement
@@ -386,7 +358,32 @@ for x = 1:numel(trial)
     end
 end
 
-  
+%% compare PDs of activated neurons with evoked movement direction of stim
+
+for ns = 1:numel(activated(1,:)) %number of neuron inputs
+    figure();set(gcf,'Color','White');
+    for n = 1:numel(activated(:,1)) %number of current inputs
+        moveDir(ns,n).direction = atan2d(mean(moveDir(ns, n).current(:,2)),mean(moveDir(ns, n).current(:,1)));
+        if moveDir(ns,n).direction < 0
+            moveDir(ns,n).direction = moveDir(ns,n).direction + 360;
+        end
+        for p = 1:numel(activated(n,ns).rad)
+            PDcomp(ns,n).dirs(p) = pdtable_decoded(activated(n,ns).rad(p));
+            PDcomp(ns,n).diff(p) = moveDir(ns,n).direction - PDcomp(ns,n).dirs(p);
+            if PDcomp(ns,n).diff(p) < 0
+                PDcomp(ns,n).diff(p) = PDcomp(ns,n).diff(p) + 360;
+            end
+        end
+        
+        histogram(PDcomp(ns,n).diff, 10)
+        
+        hold on
+    end
+    legend(string(current(n-2)) + ' µA', string(current(n-1)) + ' µA', string(current(n)) + ' µA')
+    title( 'Difference between average stim movement direction and PDs of activated neurons')
+    xlabel('Difference in angles (movement dir - PD of neuron) in degrees')
+end
+
 
 % Plots of hand vel
 % figure();
@@ -404,6 +401,11 @@ end
 % plot((stimStart_idx-startMove_idx+1):(stimLength_idx - startMove_idx+1),td_stim(trial).vel(stimStart_idx:stimLength_idx,2),'*')
 % title('Hand y-velocity(cm/s)')
 % legend('without stim', 'with stim', 'stim period')
+
+
+
+
+
 
 
 
