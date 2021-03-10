@@ -370,9 +370,9 @@ for ns = 1:numel(activated(1,:)) %number of neuron inputs
         if moveDir(ns,n).direction < 0
             moveDir(ns,n).direction = moveDir(ns,n).direction + 360;
         end
-%         if moveDir(ns,n).directionMove < 0
-%             moveDir(ns,n).directionMove = moveDir(ns,n).directionMove + 360;
-%         end
+        if moveDir(ns,n).directionMove < 0
+            moveDir(ns,n).directionMove = moveDir(ns,n).directionMove + 360;
+        end
         for p = 1:numel(activated(n,ns).rad)
             PDcomp(ns,n).dirs(p) = pdtable_decoded(activated(n,ns).rad(p));
             PDcomp(ns,n).diff(p) = moveDir(ns,n).direction - PDcomp(ns,n).dirs(p);
@@ -382,12 +382,12 @@ for ns = 1:numel(activated(1,:)) %number of neuron inputs
         end
         subplot(2,1,1)
         histogram(PDcomp(ns,n).diff, 10)
-        title( 'Difference between direction of evoked movement from stimulation and PDs of activated neurons')
+        title( 'Difference between stim  direction and PDs of activated neurons')
         xlabel('Difference in angles (stim - PD of neuron) in degrees')
         hold on
         subplot(2,1,2)
-        histogram(moveDir(ns,n).directionMove, 10)
-        title( 'Difference between decoded movement with stimulation and decoded movement without stimulation')
+        histogram(moveD(ns,n).diffMove, 10)
+        title( 'Difference between decoded movement with stim and decoded movement')
         xlabel('Difference in angles (stim movement - decoded movement) in degrees')
         hold on
 
