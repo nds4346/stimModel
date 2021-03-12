@@ -16,7 +16,7 @@ is_old_matlab = str2num(rel(1:4)) < 2018;
 %fr_file = 'vae_rates_Han_20160325_RW_dropout90_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
 %fr_file = 'vae_rates_Han_20160325_RW_dropout95_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
 %fr_file = 'firing_rates_20210223.csv';
-fr_file = 'vae_rates_Han_20160325_RW_dropout70_lambda1.0_learning1e-06_n-epochs5000_n-neurons1600_2021-03-07-142347.csv';
+fr_file = 'vae_rates_Han_20160325_RW_dropout93_lambda20_learning1e-05_n-epochs250_n-neurons1600_2021-03-11-035219.csv';
 %make firing rate array
 firing_rates = readtable([pathname,filesep, fr_file]);
 firing_rates = firing_rates{:,:};
@@ -177,12 +177,12 @@ if(~is_old_matlab)
     fig = heatmap(pdtable_decoded);set(gcf,'Color','White');
     fig.CellLabelColor = 'none';
     % jet_wrap = vertcat(jet,flipud(jet));
-    fig.Colormap = hsv;
+    fig.Colormap = colorcet('C4');
     fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
     fig.GridVisible = 'off';
 else
     fig = imagesc(pdtable_decoded);
-    colormap(hsv);
+    colormap(colorcet('C4'));
     colorbar;
 end
 %% Get grid of X and Y coords for 30
