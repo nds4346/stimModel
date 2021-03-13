@@ -192,6 +192,110 @@ num_cols = map(2);
 neuron_location(:,1) = i';
 neuron_location(:,2) = j';
 
+%% histogram of neighboring PDs vs non-neighboring PD's
+neuron = randsample(numel(pdtable), 50);
+rad = 5;
+
+for ns = 1:numel(neuron)
+    i(ns) = neuron_location(neuron(ns),1);
+    j(ns) = neuron_location(neuron(ns),2);
+    for n = 1:numel(neuron_location(:,1))
+            if sqrt((neuron_location(n,1) - i(ns))^2 + (neuron_location(n,2)-j(ns))^2) <= rad
+                PDDiffNeighbors(ns,n) = abs(pdtable(neuron(ns)) - pdtable(n));
+            else
+                PDDiffNonNeighbors(ns,n) = abs(pdtable(neuron(ns)) - pdtable(n));
+            end
+    end
+end
+
+x = find(PDDiffNeighbors);
+PDDiffNeighbors = PDDiffNeighbors(x);
+x = find(PDDiffNonNeighbors);
+PDDiffNonNeighbors = PDDiffNonNeighbors(x);
+
+
+for n = 1: numel(PDDiffNeighbors)
+    if PDDiffNeighbors(n) > 180
+        PDDiffNeighbors(n) = abs(PDDiffNeighbors(n) - 360);
+    else
+        PDDiffNeighbors(n) = PDDiffNeighbors(n);
+    end
+end
+
+PDDiffNeighbors = PDDiffNeighbors';
+
+for n = 1:numel(PDDiffNeighbors)
+    if PDDiffNeighbors(n) < 20
+        PDDiff(n,1) = PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 40
+        PDDiff(n,2)= PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 60
+        PDDiff(n,3)= PDDiffNeighbors(n);     
+    elseif PDDiffNeighbors(n) < 80
+        PDDiff(n,4)= PDDiffNeighbors(n);      
+    elseif PDDiffNeighbors(n) < 100
+        PDDiff(n,5)= PDDiffNeighbors(n);      
+    elseif PDDiffNeighbors(n) < 120
+        PDDiff(n,6)= PDDiffNeighbors(n);       
+    elseif PDDiffNeighbors(n) < 140
+        PDDiff(n,7)= PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 160
+        PDDiff(n,8)= PDDiffNeighbors(n);
+    else
+        PDDiff(n,9)= PDDiffNeighbors(n);
+    end
+end
+
+for n = 1: numel(PDDiff(1,:))
+    x = find(PDDiff(:,n));
+    PDs(n) = 100*(numel(x)/ numel(PDDiffNeighbors));
+end
+PDsNeighbor = PDs;
+
+
+for n = 1: numel(PDDiffNonNeighbors)
+    if PDDiffNonNeighbors(n) > 180
+        PDDiffNonNeighbors(n) = abs(PDDiffNonNeighbors(n) - 360);
+    else
+        PDDiffNonNeighbors(n) = PDDiffNonNeighbors(n);
+    end
+end
+
+PDDiffNonNeighbors = PDDiffNonNeighbors';
+for n = 1:numel(PDDiffNonNeighbors)
+    if PDDiffNonNeighbors(n) < 20
+        PDDiff(n,1) = PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 40
+        PDDiff(n,2)= PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 60
+        PDDiff(n,3)= PDDiffNonNeighbors(n);     
+    elseif PDDiffNonNeighbors(n) < 80
+        PDDiff(n,4)= PDDiffNonNeighbors(n);      
+    elseif PDDiffNonNeighbors(n) < 100
+        PDDiff(n,5)= PDDiffNonNeighbors(n);      
+    elseif PDDiffNonNeighbors(n) < 120
+        PDDiff(n,6)= PDDiffNonNeighbors(n);       
+    elseif PDDiffNonNeighbors(n) < 140
+        PDDiff(n,7)= PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 160
+        PDDiff(n,8)= PDDiffNonNeighbors(n);
+    else
+        PDDiff(n,9)= PDDiffNonNeighbors(n);
+    end
+end
+
+for n = 1: numel(PDDiff(1,:))
+    x = find(PDDiff(:,n));
+    PDs(n) = 100*(numel(x)/ (numel(PDDiffNonNeighbors)));
+end
+
+PDscomb = [PDs(:), PDsNeighbor(:)];
+x = 20:20: 180;        
+bar(x, PDscomb, 'grouped')
+legend('non-neighbors', 'neighbors')
+
+
+
 
 %% divide neurons into sections based on closest PDs
 clear PD
@@ -219,7 +323,7 @@ pd315 = find(PD(:,8));
 %% Select neuron to stim and calculate radius of activation
 % select random neurons based on PD
 
-neuron = [randsample(pd135,1)]; % randsample(pd0,1),randsample(pd45,1),randsample(pd90,1),,randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
+neuron = [randsample(pd0,1),randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
 
 %select stim params
 current = [15 50 100]; %current in µA
@@ -300,7 +404,7 @@ trial =[ 830 ]; %chose trial
 hz = 0.65; %firing rates from file (x spikes per bin)
 binSize = 0.050; %bin size in seconds
 rates_inHz = hz/binSize; %converting to firing rate to Hz  ~15 Hz for now
-startMove_idx = 4; %time you want to start movement 3
+startMove_idx = 3; %time you want to start movement 3
 stimStart_idx = startMove_idx + 1; %time you want to start stim at 4
 stimLength_idx =stimStart_idx + 4; %how many bins you want to stim to last (4 bins @ 50 ms = 200 ms)
 stimEnd_idx = stimLength_idx + 1; %time of start post-stim movement 
@@ -420,18 +524,28 @@ for x = 1:numel(trial) %number of trials
                 td_ex(trial(x)).pos(time,1) = td_ex(trial(x)).pos(time-1,1) + (td_ex(trial(x)).hand_vel_hat(time-1,1)*binSize);%stim effect on hand pos in x dir
                 td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).hand_vel_hat(time-1,2)*binSize);%stim effect on hand pos in y dir
             end
-            moveDir(ns, n).stim(1:numel(startMove_idx:endMove_idx),1) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,1); %movement x-axis stim case
-            moveDir(ns,n).stim(1:numel(startMove_idx:endMove_idx),2) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,2); %movement y-axis stim case
-            moveDir(ns, n).decMove(1:numel(startMove_idx:endMove_idx),1) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,1); %movement x-axis no stim case
-            moveDir(ns,n).decMove(1:numel(startMove_idx:endMove_idx),2) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,2); %movement x-axis no stim case
-            plot(td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2),'<-', 'MarkerFaceColor', color(((3*n)-2):((3*n)-2)+(numel(r)-1))) %plot stim of decoded movement
-            hold on
-            title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
-            
+           xoffset = td_stim(trial(x)).pos(startMove_idx,1);
+           moveDir(ns, n).stim(1:numel(startMove_idx:endMove_idx),1) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,1) - xoffset; %movement x-axis stim case
+           yoffset = td_stim(trial(x)).pos(startMove_idx,2);
+           moveDir(ns,n).stim(1:numel(startMove_idx:endMove_idx),2) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,2) - yoffset; %movement y-axis stim case
+           xoffset = td_ex(trial(x)).pos(startMove_idx,1);
+           moveDir(ns, n).decMove(1:numel(startMove_idx:endMove_idx),1) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,1) - xoffset; %movement x-axis no stim case
+           yoffset = td_ex(trial(x)).pos(startMove_idx,2);
+           moveDir(ns,n).decMove(1:numel(startMove_idx:endMove_idx),2) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,2) - yoffset; %movement x-axis no stim case
+           plot(td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2)) %plot stim of decoded movement
+           hold on
+           st = plot(td_stim(trial(x)).pos(stimStart_idx+1,1),td_stim(trial(x)).pos(stimStart_idx+1,2), '*k'); %plot stim of decoded movement
+           set(get(get(st(1),'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+           st = plot(td_stim(trial(x)).pos(stimStart_idx + 2,1),td_stim(trial(x)).pos(stimStart_idx + 2,2), '*m'); %plot stim of decoded movement
+           set(get(get(st(1),'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+           title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
+           
         end
-        plot(td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2), 'k<-', 'MarkerFaceColor', 'k') %plot actual movement
-        plot(td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2),  'g<-', 'MarkerFaceColor', 'g') %plot decoded movement
-        legend(string(current(n-2)) + ' µA',string(current(n-1)) + ' µA',string(current(n)) + ' µA',  'actual movement', 'decoded movement', 'Location', 'northeastoutside')
+        %plot(td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2), 'k') %plot actual movement
+        plot(td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2),  'g') %plot decoded movement
+        st = plot(td_ex(trial(x)).pos(stimStart_idx+1,1),td_ex(trial(x)).pos(stimStart_idx+1,2), '*k'); %plot stim of decoded movement
+        st = plot(td_ex(trial(x)).pos(stimStart_idx + 2,1),td_ex(trial(x)).pos(stimStart_idx + 2,2), '*m'); %plot stim of decoded movement
+        legend(string(current(n-2)) + ' µA',string(current(n-1)) + ' µA',string(current(n)) + ' µA', 'decoded movement', 'start', 'end', 'Location', 'northeastoutside')
         xlabel('X-hand position (cm)')
         ylabel('Y-hand position (cm)')
     end
@@ -440,7 +554,7 @@ end
 
 
 %% compare PDs of activated neurons with evoked movement direction of stim
-
+clear PDcomp
 str = '#0072BD';
 r = sscanf(str(2:end),'%2x%2x%2x',[1 3])/255;
 str = '#D95319';
@@ -530,13 +644,13 @@ for iter = 1:iterations
                     td_ex(trial(x)).pos(time,2) = td_ex(trial(x)).pos(time-1,2) + (td_ex(trial(x)).hand_vel_hat(time-1,2)*binSize);%stim effect on hand pos in y dir
                 end
                 xoffset = td_stim(trial(x)).pos(startMove_idx,1);
-                moveDir(ns, n).stim(1:numel(startMove_idx:endMove_idx),1) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,1) + xoffset; %movement x-axis stim case
+                moveDir(ns, n).stim(1:numel(startMove_idx:endMove_idx),1) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,1) - xoffset; %movement x-axis stim case
                 yoffset = td_stim(trial(x)).pos(startMove_idx,2);
-                moveDir(ns,n).stim(1:numel(startMove_idx:endMove_idx),2) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,2) + yoffse; %movement y-axis stim case
+                moveDir(ns,n).stim(1:numel(startMove_idx:endMove_idx),2) = td_stim(trial(x)).pos(startMove_idx:endMove_idx,2) - yoffset; %movement y-axis stim case
                 xoffset = td_ex(trial(x)).pos(startMove_idx,1);
-                moveDir(ns, n).decMove(1:numel(startMove_idx:endMove_idx),1) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,1) + xoffset; %movement x-axis no stim case
+                moveDir(ns, n).decMove(1:numel(startMove_idx:endMove_idx),1) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,1) - xoffset; %movement x-axis no stim case
                 yoffset = td_ex(trial(x)).pos(startMove_idx,2);              
-                moveDir(ns,n).decMove(1:numel(startMove_idx:endMove_idx),2) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,2) + yoffset; %movement x-axis no stim case
+                moveDir(ns,n).decMove(1:numel(startMove_idx:endMove_idx),2) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,2) - yoffset; %movement x-axis no stim case
                 
             end
         end

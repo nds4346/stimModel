@@ -192,6 +192,112 @@ num_cols = map(2);
 neuron_location(:,1) = i';
 neuron_location(:,2) = j';
 
+%% histogram of neighboring PDs vs non-neighboring PDs
+neuron = randsample(numel(pdtable), 50);
+rad = 5;
+
+for ns = 1:numel(neuron)
+    i(ns) = neuron_location(neuron(ns),1);
+    j(ns) = neuron_location(neuron(ns),2);
+    for n = 1:numel(neuron_location(:,1))
+            if sqrt((neuron_location(n,1) - i(ns))^2 + (neuron_location(n,2)-j(ns))^2) <= rad
+                PDDiffNeighbors(ns,n) = abs(pdtable(neuron(ns)) - pdtable(n));
+            else
+                PDDiffNonNeighbors(ns,n) = abs(pdtable(neuron(ns)) - pdtable(n));
+            end
+    end
+end
+
+x = find(PDDiffNeighbors);
+PDDiffNeighbors = PDDiffNeighbors(x);
+x = find(PDDiffNonNeighbors);
+PDDiffNonNeighbors = PDDiffNonNeighbors(x);
+
+
+for n = 1: numel(PDDiffNeighbors)
+    if PDDiffNeighbors(n) > 180
+        PDDiffNeighbors(n) = abs(PDDiffNeighbors(n) - 360);
+    else
+        PDDiffNeighbors(n) = PDDiffNeighbors(n);
+    end
+end
+
+PDDiffNeighbors = PDDiffNeighbors';
+
+for n = 1:numel(PDDiffNeighbors)
+    if PDDiffNeighbors(n) < 20
+        PDDiff(n,1) = PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 40
+        PDDiff(n,2)= PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 60
+        PDDiff(n,3)= PDDiffNeighbors(n);     
+    elseif PDDiffNeighbors(n) < 80
+        PDDiff(n,4)= PDDiffNeighbors(n);      
+    elseif PDDiffNeighbors(n) < 100
+        PDDiff(n,5)= PDDiffNeighbors(n);      
+    elseif PDDiffNeighbors(n) < 120
+        PDDiff(n,6)= PDDiffNeighbors(n);       
+    elseif PDDiffNeighbors(n) < 140
+        PDDiff(n,7)= PDDiffNeighbors(n);
+    elseif PDDiffNeighbors(n) < 160
+        PDDiff(n,8)= PDDiffNeighbors(n);
+    else
+        PDDiff(n,9)= PDDiffNeighbors(n);
+    end
+end
+
+for n = 1: numel(PDDiff(1,:))
+    x = find(PDDiff(:,n));
+    PDs(n) = 100*(numel(x)/ numel(PDDiffNeighbors));
+end
+PDsNeighbor = PDs;
+
+
+for n = 1: numel(PDDiffNonNeighbors)
+    if PDDiffNonNeighbors(n) > 180
+        PDDiffNonNeighbors(n) = abs(PDDiffNonNeighbors(n) - 360);
+    else
+        PDDiffNonNeighbors(n) = PDDiffNonNeighbors(n);
+    end
+end
+
+PDDiffNonNeighbors = PDDiffNonNeighbors';
+for n = 1:numel(PDDiffNonNeighbors)
+    if PDDiffNonNeighbors(n) < 20
+        PDDiff(n,1) = PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 40
+        PDDiff(n,2)= PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 60
+        PDDiff(n,3)= PDDiffNonNeighbors(n);     
+    elseif PDDiffNonNeighbors(n) < 80
+        PDDiff(n,4)= PDDiffNonNeighbors(n);      
+    elseif PDDiffNonNeighbors(n) < 100
+        PDDiff(n,5)= PDDiffNonNeighbors(n);      
+    elseif PDDiffNonNeighbors(n) < 120
+        PDDiff(n,6)= PDDiffNonNeighbors(n);       
+    elseif PDDiffNonNeighbors(n) < 140
+        PDDiff(n,7)= PDDiffNonNeighbors(n);
+    elseif PDDiffNonNeighbors(n) < 160
+        PDDiff(n,8)= PDDiffNonNeighbors(n);
+    else
+        PDDiff(n,9)= PDDiffNonNeighbors(n);
+    end
+end
+
+for n = 1: numel(PDDiff(1,:))
+    x = find(PDDiff(:,n));
+    PDs(n) = 100*(numel(x)/ (numel(PDDiffNonNeighbors)));
+end
+PDscomb = [PDsNeighbor(:), PDs(:)];
+x = 20:20: 180;        
+bar(x, PDscomb, 'grouped'); set(gcf,'Color','White');
+legend( 'neighbors','non-neighbors')
+title('Difference in PD for neurons based on distance')
+xlabel('Difference in direction (degrees)')
+ylabel('Percentage')
+
+
+clear PDDiff PDDiffNonNeighbors PDDiffNeighbors PDs PDsNeighbor
 
 %% divide neurons into sections based on closest PDs
 clear PD
@@ -219,7 +325,7 @@ pd315 = find(PD(:,8));
 %% Select neuron to stim and calculate radius of activation
 % select random neurons based on PD
 
-neuron = [randsample(pd135,1)]; % randsample(pd0,1),randsample(pd45,1),randsample(pd90,1),,randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
+neuron = [randsample(pd0,1),randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
 
 %select stim params
 current = [15 50 100]; %current in µA
@@ -430,12 +536,18 @@ for x = 1:numel(trial) %number of trials
            moveDir(ns,n).decMove(1:numel(startMove_idx:endMove_idx),2) = td_ex(trial(x)).pos(startMove_idx:endMove_idx,2) - yoffset; %movement x-axis no stim case
            plot(td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_stim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2)) %plot stim of decoded movement
            hold on
+           st = plot(td_stim(trial(x)).pos(stimStart_idx+1,1),td_stim(trial(x)).pos(stimStart_idx+1,2), '*k'); %plot stim of decoded movement
+           set(get(get(st(1),'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
+           st = plot(td_stim(trial(x)).pos(stimStart_idx + 2,1),td_stim(trial(x)).pos(stimStart_idx + 2,2), '*m'); %plot stim of decoded movement
+           set(get(get(st(1),'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
            title('Hand Position and the Effect of ICMS neuron ' + string(neuron(ns)))
            
         end
-        plot(td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2), 'k') %plot actual movement
+        %plot(td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_trim(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2), 'k') %plot actual movement
         plot(td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,1),td_ex(trial(x)).pos(stimStart_idx+1:stimStart_idx + 2,2),  'g') %plot decoded movement
-        legend(string(current(n-2)) + ' µA',string(current(n-1)) + ' µA',string(current(n)) + ' µA',  'actual movement', 'decoded movement', 'Location', 'northeastoutside')
+        st = plot(td_ex(trial(x)).pos(stimStart_idx+1,1),td_ex(trial(x)).pos(stimStart_idx+1,2), '*k'); %plot stim of decoded movement
+        st = plot(td_ex(trial(x)).pos(stimStart_idx + 2,1),td_ex(trial(x)).pos(stimStart_idx + 2,2), '*m'); %plot stim of decoded movement
+        legend(string(current(n-2)) + ' µA',string(current(n-1)) + ' µA',string(current(n)) + ' µA', 'decoded movement', 'start', 'end', 'Location', 'northeastoutside')
         xlabel('X-hand position (cm)')
         ylabel('Y-hand position (cm)')
     end
