@@ -11,7 +11,7 @@ td = smoothSignals(td,smoothParams);
 
 %%
 firing_rates = readtable([pathname,filesep,...
-    'vae_rates_Han_20160325_RW_dropout70_lambda1.0_learning1e-06_n-epochs5000_n-neurons1600_2021-03-07-142347.csv']);
+    'vae_rates_Han_20160325_RW_dropout91_lambda200_learning1e-05_n-epochs250_n-neurons1600_2021-03-11-143600.csv']);
 
 
 firing_rates = firing_rates{:,:};% add new firing rates to td
@@ -101,8 +101,8 @@ colorbar;
 % fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
 % fig.GridVisible = 'off';
 % fig.Colormap = hsv;
-fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
-fig.GridVisible = 'off';
+% fig.Title='Heatmap of PDs from 30x30 area 2 neurons';
+% fig.GridVisible = 'off';
 
 %% randomly select stimulation neuron
 

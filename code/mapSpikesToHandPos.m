@@ -15,6 +15,7 @@ is_old_matlab = str2num(rel(1:4)) < 2018;
 %% load in firing rates
 fr_file = 'vae_rates_Han_20160325_RW_dropout91_lambda20_learning1e-05_n-epochs600_n-neurons1600_rate6.0_2021-03-13-184825.csv';
 %fr_file = 'vae_rates_Han_20160325_RW_dropout70_lambda1.0_learning1e-06_n-epochs5000_n-neurons1600_2021-03-07-142347.csv';
+
 %make firing rate array
 firing_rates = readtable([pathname,filesep, fr_file]);
 firing_rates = firing_rates{:,:};
@@ -182,14 +183,16 @@ if(~is_old_matlab)
     % jet_wrap = vertcat(jet,flipud(jet));
     fig.Colormap = hsv;
     fig.Title='Heatmap of PDs from 40x40 area 2 neurons (degrees)';
+
     fig.GridVisible = 'off';
     fig.XDisplayLabels = nan(size(pdtable(:,1)));
     fig.YDisplayLabels = nan(size(pdtable(:,1)));
     xlabel('Neurons (n = 40)')
     ylabel('Neurons (n = 40)')
 else
-    fig = imagesc(pdtable);
-    colormap(hsv);
+    fig = imagesc(pdtable_decoded);
+    colormap(colorcet('C4'));
+    
     colorbar;
 end
 %% Get grid of X and Y coords for 30
@@ -334,7 +337,7 @@ pd315 = find(PD(:,8));
 %% Select neuron to stim and calculate radius of activation
 % select random neurons based on PD
 
-neuron = [randsample(pd90,30)]; %randsample(pd0,1), randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
+neuron = [randsample(pd135,30)]; %randsample(pd0,1), randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
 % 944 350 57 344 1332 1508 293 1390  -- good neurons for 240 dir
 %select stim params
 current = [ 15 30 50 100]; %current in µA
