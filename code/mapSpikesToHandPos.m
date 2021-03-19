@@ -457,7 +457,7 @@ for i = 1:numel(current)
             for p = 1:numel(activated(i,ns).rad)
                 td_stim(trial(t)).VAE_firing_rates(stimStart_idx:stimLength_idx,activated(i,ns).rad(p)) = hz;               
             end
-            compareDirs(i,ns).CActivated = pdtable(activated(i,ns).rad); 
+            compareDirs(i,ns).CActivated = pdtable(activated(i,ns).rad); %the activated PDs of neurons from circular activation
             compareDirs(i,ns).decodedNoStim = atan2d(td_stim(trial(t)).hand_vel_hat(stimStart_idx + 2,2),td_stim(trial(t)).hand_vel_hat(stimStart_idx + 2,1));
             if compareDirs(i,ns).decodedNoStim < 0
                 compareDirs(i,ns).decodedNoStim = compareDirs(i,ns).decodedNoStim + 360;
@@ -473,7 +473,7 @@ for i = 1:numel(current)
             for p = 1:numel(Pactivated(i,ns).rad)
                 td_stim(trial(t)).VAE_firing_rates(stimStart_idx:stimLength_idx,Pactivated(i,ns).rad(p)) = hz;
             end
-            compareDirs(i,ns).PActivated = pdtable(Pactivated(i,ns).rad);
+            compareDirs(i,ns).PActivated = pdtable(Pactivated(i,ns).rad); %activated PDs of neurons from probabilistic
             td_stim(trial(t)).Phand_vel_hat(startMove_idx:endMove_idx,:) = td_stim(trial(t)).VAE_firing_rates(startMove_idx:endMove_idx,:)*dec + bias; %stim decoded hand vel
             compareDirs(i,ns).PdecodedStim = atan2d(td_stim(trial(t)).Phand_vel_hat(stimStart_idx + 2,2),td_stim(trial(t)).hand_vel_hat(stimStart_idx + 2,1));
             if compareDirs(i,ns).PdecodedStim < 0 
