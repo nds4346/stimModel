@@ -337,7 +337,7 @@ pd315 = find(PD(:,8));
 %% Select neuron to stim and calculate radius of activation
 % select random neurons based on PD
 
-neuron = [randsample(pd135,30)]; %randsample(pd0,1), randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
+neuron = [randsample(pd90, 30)]; %randsample(pd0,1), randsample(pd45,1),randsample(pd90,1),randsample(pd135,1),randsample(pd180,1),randsample(pd225,1),randsample(pd270,1),randsample(pd315,1)];
 % 944 350 57 344 1332 1508 293 1390  -- good neurons for 240 dir
 %select stim params
 current = [ 15 30 50 100]; %current in µA
@@ -449,6 +449,7 @@ for x = 1:numel(trial)
 end
 
 %% compare decoded handvel between stim and no stim between activation cases
+clear compareDirs
 for i = 1:numel(current)
     for t = 1:numel(trial)
         for ns = 1:numel(neuron)
