@@ -2,10 +2,10 @@
 filename = 'Han_201603015_RW_SmoothKin_50ms.mat';
 
 %Nathan's mac path
-  pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
+%   pathname = '~/Documents/Documents/Thesis_Seminar/Model/data/';
 
 %Joe's windows path
-%pathname = 'D:\Lab\Data\StimModel';
+pathname = 'D:\Lab\Data\StimModel';
 
 load([pathname filesep filename]);
 
@@ -16,7 +16,7 @@ is_old_matlab = str2num(rel(1:4)) < 2018;
 %fr_file = 'vae_rates_Han_20160325_RW_dropout90_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
 %fr_file = 'vae_rates_Han_20160325_RW_dropout95_lambda1_learning5e-05_n-epochs1500_n-neurons1600_2021-03-02-032351.csv';
 %fr_file = 'firing_rates_20210223.csv';
-fr_file = 'vae_rates_Han_20160325_RW_dropout93_lambda20_learning1e-05_n-epochs250_n-neurons1600_2021-03-11-035219.csv';
+fr_file = 'vae_rates_Han_20160325_RW_dropout91_lambda20_learning1e-05_n-epochs600_n-neurons1600_rate6.0_2021-03-13-184825.csv';
 %make firing rate array
 firing_rates = readtable([pathname,filesep, fr_file]);
 firing_rates = firing_rates{:,:};
@@ -36,6 +36,11 @@ map = [map map];
 % td.S1_spikes(1:30000,:) = [];
 % td.speed(1:30000,:) = [];
 % td.vel_rect(1:30000,:) = [];
+
+%% find decoder predictors of hand velocities from firing rates
+hand_vel = td.train_vel;
+fr = td.VAE_firing_rates(td.train_idx,:);
+
 %% match up data lengths
 
 field_len = length(td.vel);
@@ -48,31 +53,24 @@ for i_field = 1:numel(td_fieldnames)
     end
 end
 
-%% find lagged firing rates 
-fr = td.VAE_firing_rates;
-fr_lagged = fr;
-num_lags = 0;
-for i=1:num_lags
-    fr_lag = circshift(fr,i);
-    fr_lagged = [fr_lagged,fr_lag];
-end
-%% find decoder predictors of hand velocities from firing rates
-hand_vel = td.vel;
-% perform dropout reguralization
-lr = 0.01;
-dec = rand(size(fr_lagged,2),2)-0.5;
+
+
+
+%% perform dropout reguralization
+lr = 0.001;
+dec = rand(size(fr,2),2)-0.5;
 bias = [0,0];
-num_iters = 400;
-dropout_rate = 0.8;
+num_iters = 5000;
+dropout_rate = 0.93;
 
 vaf_list_drop = zeros(num_iters,2);
 vaf_list_mdl = zeros(num_iters,2);
-n_neurons = size(fr_lagged,2);
+n_neurons = size(fr,2);
 for i_iter = 1:num_iters
     % dropout inputs
     keep_mask = zeros(n_neurons,1);
     keep_mask(datasample(1:1:n_neurons,ceil(n_neurons*(1-dropout_rate)))) = 1;
-    x = (fr_lagged.*keep_mask');
+    x = (fr.*keep_mask');
     
     vel_pred = x*dec + bias;
     
@@ -83,29 +81,35 @@ for i_iter = 1:num_iters
     dec = dec - lr*d_dec;
     
     vaf_list_drop(i_iter,:) = compute_vaf(hand_vel,vel_pred);
-    vaf_list_mdl(i_iter,:) = compute_vaf(hand_vel,(fr_lagged*dec)*(1-dropout_rate) + bias);
+    vaf_list_mdl(i_iter,:) = compute_vaf(hand_vel,(fr*dec)*(1-dropout_rate) + bias);
+    
+    if(mod(i_iter,100)==0)
+        disp(vaf_list_mdl(i_iter,:))
+    end
 end
-% adjust dec to deal with dropout rate
+    
+
+%% adjust dec to deal with dropout rate
 dec = dec*(1-dropout_rate);
 
-%% predict hand velocity and get vaf
+%% predict hand velocity for whole file and get vaf
+hand_vel_hat = td.VAE_firing_rates*dec + bias;
+vaf_pred = compute_vaf(td.vel,hand_vel_hat);
+b = hand_vel_hat\td.vel;
+td.hand_vel_hat = hand_vel_hat;
 
-hand_vel_hat = fr_lagged*dec + bias;
-vaf_pred = compute_vaf(hand_vel,hand_vel_hat);
-b = hand_vel_hat\hand_vel;
 %% find predicted hand velocities using firing rates
 % A*dec = b, A\b = dec
-td.hand_vel_hat = hand_vel_hat;
 
 figure();set(gcf,'Color','White')
 subplot(1,2,1)
-plot(hand_vel(:,1),hand_vel_hat(:,1),'.')
+plot(td.vel(:,1),td.hand_vel_hat(:,1),'.')
 hold on;
 plot([-30,30],[-30,30],'k--');
 ylabel('Decoded hand x-velocity (cm/s)')
 xlabel('Hand -velocity (cm/s)')
 subplot(1,2,2)
-plot(hand_vel(:,2),hand_vel_hat(:,2),'.')
+plot(td.vel(:,2),td.hand_vel_hat(:,2),'.')
 hold on;
 plot([-30,30],[-30,30],'k--');
 ylabel('Decoded hand y-velocity (cm/s)')
@@ -143,29 +147,30 @@ pdtable(pdtable<0) = pdtable(pdtable<0)+360;
 figure();
 hist(pdtable);
 pdtable =reshape(pdtable, map);
-% for n = 1:numel(dec(:,1))
-%     pdtable_decoded(n) = atan2(dec(n,2), dec(n,1));
-% end
-% 
-% pdtable =rad2deg(pdtable_decoded);
-% pdtable_decoded(pdtable_decoded<0) = pdtable_decoded(pdtable_decoded<0)+360;
-% figure();
-% hist(pdtable_decoded);
-% pdtable_decoded =reshape(pdtable_decoded, map);
+
+for n = 1:numel(dec(:,1))
+    pdtable_decoded(n) = atan2(dec(n,2), dec(n,1));
+end
+
+pdtable_decoded =rad2deg(pdtable_decoded);
+pdtable_decoded(pdtable_decoded<0) = pdtable_decoded(pdtable_decoded<0)+360;
+figure();
+hist(pdtable_decoded);
+pdtable_decoded =reshape(pdtable_decoded, map);
 
 %% histogram of angular differences
 for x = 1:numel(pdtable)
     PDdiff(x) = angleDiff(pdtable(x),pdtable_decoded(x),0);
 end
 figure();set(gcf,'Color','White')
-hist(PDdiff,20)
+hist(reshape(PDdiff,[],1),20)
 title('Difference between actual PDs and decoder PDs')
 xticks([-180 0 180])
 xlabel('Angular difference (actual - decoded = difference)')
 
 %% Circular Histogram of PDs
 figure();set(gcf,'Color','White');
-theta = deg2rad(pdtable);
+theta = deg2rad(pdtable_decoded);
 theta = reshape((theta).', 1, []);
 his = polarhistogram(theta, 36);
 title('Histogram of PDs')
@@ -180,7 +185,7 @@ if(~is_old_matlab)
     fig.Title='Heatmap of PDs from 40x40 area 2 neurons';
     fig.GridVisible = 'off';
 else
-    fig = imagesc(pdtable_decoded);
+    fig = imagesc(pdtable);
     colormap(colorcet('C4'));
     
     colorbar;
